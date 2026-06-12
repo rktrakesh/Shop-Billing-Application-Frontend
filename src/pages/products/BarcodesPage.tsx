@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { QrCode, Search, Download, FileDown, RefreshCw } from "lucide-react";
-import { variantService, productService, barcodeService, settingsService, downloadBlob } from "@/services";
+import { QrCode, Search, Download, FileDown, RefreshCw, Printer } from "lucide-react";
+import { variantService, productService, barcodeService, settingsService, downloadBlob, printLabels } from "@/services";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, Badge } from "@/components/ui/index";
@@ -14,6 +14,8 @@ export default function BarcodesPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<ProductVariantResponse | null>(null);
+  const [printQty, setPrintQty] = useState(1);
+  const [printing, setPrinting] = useState(false);
 
   const { data: settingsRes } = useQuery({
     queryKey: ["shop-settings"],
@@ -75,6 +77,18 @@ export default function BarcodesPage() {
     }
   };
 
+  const handlePrintLabels = async (id: number) => {
+    setPrinting(true);
+    try {
+      const res = await barcodeService.downloadPng(id);
+      printLabels(res.data, printQty, 60, 30);
+    } catch {
+      toast.error("Failed to open print preview");
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   return (
     <div>
       <PageHeader title="Barcode Management" subtitle="Generate, preview and download barcode labels" />
@@ -100,7 +114,14 @@ export default function BarcodesPage() {
               ) : (
                 <div className="space-y-1.5 max-h-[500px] overflow-y-auto">
                   {filtered.map((v) => (
-                    <button key={v.id} onClick={() => setSelected(v)} className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors text-left ${selected?.id === v.id ? "border-primary/60 bg-primary/10" : "border-border/30 hover:border-primary/30 hover:bg-card/30"}`}>
+                    <button
+                      key={v.id}
+                      onClick={() => {
+                        setSelected(v);
+                        setPrintQty(1);
+                      }}
+                      className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors text-left ${selected?.id === v.id ? "border-primary/60 bg-primary/10" : "border-border/30 hover:border-primary/30 hover:bg-card/30"}`}
+                    >
                       <div>
                         <p className="text-sm font-medium text-text-primary">{v.designName}</p>
                         <p className="text-xs text-text-muted">
@@ -155,10 +176,10 @@ export default function BarcodesPage() {
                       </Button>
                     ) : (
                       <>
-                        {/* <Button className="w-full" variant="outline" onClick={() => regenerateMutation.mutate(selected.id)} loading={regenerateMutation.isPending}>
+                        <Button className="w-full" variant="outline" onClick={() => regenerateMutation.mutate(selected.id)} loading={regenerateMutation.isPending}>
                           <RefreshCw className="h-4 w-4" />
                           Regenerate Barcode
-                        </Button> */}
+                        </Button>
                         <div className="grid grid-cols-2 gap-2">
                           <Button variant="secondary" onClick={() => handleDownloadPng(selected.id, selected.productCode)}>
                             <Download className="h-4 w-4" />
@@ -168,6 +189,24 @@ export default function BarcodesPage() {
                             <FileDown className="h-4 w-4" />
                             PDF
                           </Button>
+                        </div>
+
+                        {/* Print labels (thermal label printer, 60mm x 30mm) */}
+                        <div className="pt-2 border-t border-border/30 space-y-2">
+                          <label className="text-xs text-text-muted">Number of labels to print</label>
+                          <div className="flex items-center gap-2">
+                            <Input type="number" min={1} value={printQty} onChange={(e) => setPrintQty(Math.max(1, parseInt(e.target.value) || 1))} className="w-24" />
+                            {selected.stock > 0 && (
+                              <button type="button" onClick={() => setPrintQty(selected.stock)} className="text-xs text-primary hover:underline">
+                                Use stock ({selected.stock})
+                              </button>
+                            )}
+                          </div>
+                          <Button className="w-full" onClick={() => handlePrintLabels(selected.id)} loading={printing}>
+                            <Printer className="h-4 w-4" />
+                            Print {printQty} Label{printQty > 1 ? "s" : ""}
+                          </Button>
+                          <p className="text-xs text-text-muted">Label size: 60mm × 30mm. Select your thermal label printer in the print dialog.</p>
                         </div>
                       </>
                     )}

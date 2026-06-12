@@ -3,13 +3,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { QrCode, Search, Plus, Minus, Trash2, ShoppingCart, UserPlus, Download, X, Check, User, Printer } from "lucide-react";
-import { barcodeService, customerService, invoiceService, variantService, downloadBlob, printBlob } from "@/services";
+import { QrCode, Search, Plus, Minus, Trash2, ShoppingCart, UserPlus, Download, X, Check, User, Printer, Receipt } from "lucide-react";
+import { barcodeService, customerService, invoiceService, variantService, settingsService, downloadBlob, printBlob, printReceipt } from "@/services";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/index";
 import { formatCurrency } from "@/utils";
-import type { CartItem, CustomerResponse, InvoiceRequest, ProductVariantResponse } from "@/types";
+import type { CartItem, CustomerResponse, InvoiceRequest, InvoiceResponse, ProductVariantResponse } from "@/types";
 import toast from "react-hot-toast";
 
 // Simple id generator for cart items
@@ -46,7 +46,7 @@ export default function BillingPage() {
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const [showVariantDialog, setShowVariantDialog] = useState(false);
   const [searchedVariants, setSearchedVariants] = useState<ProductVariantResponse[]>([]);
-  const [lastInvoice, setLastInvoice] = useState<{ id: number; number: string } | null>(null);
+  const [lastInvoice, setLastInvoice] = useState<InvoiceResponse | null>(null);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   // Customer search
@@ -218,7 +218,7 @@ export default function BillingPage() {
     mutationFn: (req: InvoiceRequest) => invoiceService.create(req),
     onSuccess: (res) => {
       const inv = res.data.data;
-      setLastInvoice({ id: inv.id, number: inv.invoiceNumber });
+      setLastInvoice(inv);
       toast.success(`Invoice ${inv.invoiceNumber} created!`);
       setCart([]);
       setSelectedCustomer(null);
@@ -257,11 +257,19 @@ export default function BillingPage() {
 
   const [printing, setPrinting] = useState(false);
 
+  // Shop settings used for the thermal receipt header/footer
+  const { data: shopSettingsRes } = useQuery({
+    queryKey: ["shop-settings"],
+    queryFn: () => settingsService.get(),
+    staleTime: 5 * 60_000,
+  });
+  const shopSettings = shopSettingsRes?.data?.data;
+
   const handleDownloadPdf = async () => {
     if (!lastInvoice) return;
     try {
       const res = await invoiceService.downloadPdf(lastInvoice.id);
-      downloadBlob(res.data, `${lastInvoice.number}.pdf`);
+      downloadBlob(res.data, `${lastInvoice.invoiceNumber}.pdf`);
     } catch {
       toast.error("Failed to download PDF");
     }
@@ -278,6 +286,11 @@ export default function BillingPage() {
     } finally {
       setPrinting(false);
     }
+  };
+
+  const handlePrintReceipt = () => {
+    if (!lastInvoice) return;
+    printReceipt(lastInvoice, shopSettings);
   };
 
   return (
@@ -388,15 +401,19 @@ export default function BillingPage() {
 
         {/* Success banner */}
         {lastInvoice && (
-          <div className="bg-success/10 border border-success/30 rounded-xl p-4 flex items-center justify-between">
+          <div className="bg-success/10 border border-success/30 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Check className="h-5 w-5 text-success" />
               <div>
                 <p className="text-sm font-medium text-success">Invoice Generated!</p>
-                <p className="text-xs text-text-muted">{lastInvoice.number}</p>
+                <p className="text-xs text-text-muted">{lastInvoice.invoiceNumber}</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={handlePrintReceipt}>
+                <Receipt className="h-3.5 w-3.5" />
+                Print Receipt
+              </Button>
               <Button size="sm" variant="outline" onClick={handlePrintPdf} loading={printing}>
                 <Printer className="h-3.5 w-3.5" />
                 Print
