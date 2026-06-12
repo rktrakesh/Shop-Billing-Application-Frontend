@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-text-primary font-sans antialiased;
+  }
+
+  :root {
+    --background: 15 23 42;
+    --foreground: 248 250 252;
+    --card: 51 65 85;
+    --card-foreground: 248 250 252;
+    --primary: 37 99 235;
+    --primary-foreground: 248 250 252;
+    --secondary: 30 41 59;
+    --secondary-foreground: 203 213 225;
+    --muted: 51 65 85;
+    --muted-foreground: 148 163 184;
+    --border: 71 85 105;
+    --radius: 0.5rem;
+  }
+}
+
+@layer components {
+  .skeleton {
+    @apply relative overflow-hidden bg-card rounded;
+    background: linear-gradient(
+      90deg,
+      #334155 25%,
+      #3e4f6a 50%,
+      #334155 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border/50 rounded-lg;
+  }
+
+  .stat-card {
+    @apply bg-sidebar border border-border/40 rounded-xl p-5 hover:border-primary/40 transition-all duration-200;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-card/60 transition-all duration-150 text-sm font-medium cursor-pointer;
+  }
+
+  .nav-item-active {
+    @apply bg-primary/20 text-primary border border-primary/30;
+  }
+
+  .data-table-row {
+    @apply border-b border-border/30 hover:bg-card/40 transition-colors;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply badge bg-success/20 text-success border border-success/30;
+  }
+
+  .badge-danger {
+    @apply badge bg-danger/20 text-danger border border-danger/30;
+  }
+
+  .badge-warning {
+    @apply badge bg-warning/20 text-warning border border-warning/30;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary/20 text-primary border border-primary/30;
+  }
+
+  .badge-muted {
+    @apply badge bg-card text-text-secondary border border-border/40;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1E293B;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748B;
+}
+
+/* Input autofill fix */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #334155 inset !important;
+  -webkit-text-fill-color: #F8FAFC !important;
+  caret-color: #F8FAFC;
+}
