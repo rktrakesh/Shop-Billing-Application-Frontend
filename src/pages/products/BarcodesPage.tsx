@@ -176,10 +176,10 @@ export default function BarcodesPage() {
                       </Button>
                     ) : (
                       <>
-                        <Button className="w-full" variant="outline" onClick={() => regenerateMutation.mutate(selected.id)} loading={regenerateMutation.isPending}>
+                        {/* <Button className="w-full" variant="outline" onClick={() => regenerateMutation.mutate(selected.id)} loading={regenerateMutation.isPending}>
                           <RefreshCw className="h-4 w-4" />
                           Regenerate Barcode
-                        </Button>
+                        </Button> */}
                         <div className="grid grid-cols-2 gap-2">
                           <Button variant="secondary" onClick={() => handleDownloadPng(selected.id, selected.productCode)}>
                             <Download className="h-4 w-4" />
