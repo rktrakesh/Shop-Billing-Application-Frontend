@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Download, Eye, Printer } from "lucide-react";
-import { invoiceService, downloadBlob, printBlob } from "@/services";
+import { FileText, Download, Eye, Printer, Receipt } from "lucide-react";
+import { invoiceService, settingsService, downloadBlob, printBlob, printReceipt } from "@/services";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody } from "@/components/ui/index";
 import { DataTable } from "@/components/common/DataTable";
@@ -23,6 +23,14 @@ export default function InvoicesPage() {
   });
   const invoices = res?.data?.data ?? [];
 
+  // Shop settings used for the thermal receipt header/footer
+  const { data: shopSettingsRes } = useQuery({
+    queryKey: ["shop-settings"],
+    queryFn: () => settingsService.get(),
+    staleTime: 5 * 60_000,
+  });
+  const shopSettings = shopSettingsRes?.data?.data;
+
   const handleDownload = async (id: number, num: string) => {
     try {
       const r = await invoiceService.downloadPdf(id);
@@ -39,6 +47,10 @@ export default function InvoicesPage() {
     } catch {
       toast.error("Failed to open print preview");
     }
+  };
+
+  const handlePrintReceipt = (invoice: InvoiceResponse) => {
+    printReceipt(invoice, shopSettings);
   };
 
   return (
@@ -67,7 +79,10 @@ export default function InvoicesPage() {
                   <Button size="icon-sm" variant="ghost" onClick={() => setViewing(inv)}>
                     <Eye className="h-3.5 w-3.5" />
                   </Button>
-                  <Button size="icon-sm" variant="ghost" onClick={() => handlePrint(inv.id)} title="Print">
+                  <Button size="icon-sm" variant="ghost" onClick={() => handlePrintReceipt(inv)} title="Print Receipt">
+                    <Receipt className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="icon-sm" variant="ghost" onClick={() => handlePrint(inv.id)} title="Print PDF">
                     <Printer className="h-3.5 w-3.5" />
                   </Button>
                   <Button size="icon-sm" variant="ghost" onClick={() => handleDownload(inv.id, inv.invoiceNumber)} title="Download">
@@ -156,6 +171,10 @@ export default function InvoicesPage() {
               {viewing.notes && <p className="mt-4 text-xs text-text-muted border-t border-border/30 pt-3">Notes: {viewing.notes}</p>}
 
               <div className="flex gap-2 mt-4">
+                <Button className="flex-1" variant="outline" onClick={() => handlePrintReceipt(viewing)}>
+                  <Receipt className="h-4 w-4" />
+                  Print Receipt
+                </Button>
                 <Button className="flex-1" variant="outline" onClick={() => handlePrint(viewing.id)}>
                   <Printer className="h-4 w-4" />
                   Print

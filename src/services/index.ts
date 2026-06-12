@@ -188,3 +188,253 @@ export function printBlob(blob: Blob) {
   };
   setTimeout(cleanup, 60_000);
 }
+
+// ── Utility: Print N copies of a barcode label image ───────────
+// Opens a print-ready view that repeats the given label image (PNG blob)
+// `quantity` times, one per physical label, sized to `widthMm` x `heightMm`.
+// Intended for direct thermal label printers (e.g. 60mm x 30mm rolls).
+export function printLabels(blob: Blob, quantity: number, widthMm = 60, heightMm = 30) {
+  const url = URL.createObjectURL(blob);
+  const count = Math.max(1, Math.floor(quantity) || 1);
+
+  const labels = Array.from({ length: count })
+    .map(() => `<div class="label"><img src="${url}" alt="Barcode label" /></div>`)
+    .join("");
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Print Labels</title>
+        <style>
+          @page {
+            size: ${widthMm}mm ${heightMm}mm;
+            margin: 0;
+          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { margin: 0; }
+          .label {
+            width: ${widthMm}mm;
+            height: ${heightMm}mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            page-break-after: always;
+            overflow: hidden;
+          }
+          .label:last-child { page-break-after: auto; }
+          .label img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
+        </style>
+      </head>
+      <body>
+        ${labels}
+      </body>
+    </html>
+  `;
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!doc) return;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  const triggerPrint = () => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch {
+      window.open(url, "_blank");
+    }
+  };
+
+  // Wait for the image(s) to load before printing
+  const img = doc.querySelector("img");
+  if (img && !(img as HTMLImageElement).complete) {
+    img.addEventListener("load", triggerPrint, { once: true });
+    img.addEventListener("error", triggerPrint, { once: true });
+  } else {
+    setTimeout(triggerPrint, 200);
+  }
+
+  // Clean up after printing
+  setTimeout(() => {
+    document.body.removeChild(iframe);
+    URL.revokeObjectURL(url);
+  }, 60_000);
+}
+
+// ── Utility: Print a thermal receipt for an invoice ────────────
+// Builds a narrow, continuous-roll receipt (default 80mm wide) directly
+// from invoice + shop settings data already available on the frontend,
+// and opens the browser print dialog. Change RECEIPT_WIDTH_MM below to
+// match your thermal receipt roll (e.g. 58mm or 80mm).
+export const RECEIPT_WIDTH_MM = 105;
+
+function escapeHtml(str: string | number | undefined | null): string {
+  if (str === undefined || str === null) return "";
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function formatMoney(n: number): string {
+  return `Rs. ${n.toFixed(2)}`;
+}
+
+function formatReceiptDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+export function printReceipt(invoice: InvoiceResponse, shop?: ShopSettingsResponse | null, widthMm: number = RECEIPT_WIDTH_MM) {
+  const shopName = shop?.shopName || "RKT APPARELS";
+  const itemsHtml = invoice.items
+    .map((item) => {
+      const variant = [item.color, item.size].filter(Boolean).join(" / ");
+      return `
+      <div class="item">
+        <div class="item-name">${escapeHtml(item.designName)}${variant ? ` (${escapeHtml(variant)})` : ""}</div>
+        <div class="item-row">
+          <span>${item.quantity} x ${formatMoney(item.unitPrice)}</span>
+          <span>${formatMoney(item.lineTotal)}</span>
+        </div>
+        ${item.discountAmount > 0 ? `<div class="item-row discount"><span>Discount</span><span>-${formatMoney(item.discountAmount)}</span></div>` : ""}
+      </div>
+    `;
+    })
+    .join("");
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Receipt ${escapeHtml(invoice.invoiceNumber)}</title>
+        <style>
+          @page {
+            size: ${widthMm}mm auto;
+            margin: 0;
+          }
+          * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', monospace; }
+          body {
+            width: ${widthMm}mm;
+            padding: 3mm;
+            font-size: 11px;
+            color: #000;
+          }
+          .center { text-align: center; }
+          .shop-name { font-size: 15px; font-weight: bold; text-transform: uppercase; }
+          .muted { font-size: 9px; color: #333; }
+          .divider { border-top: 1px dashed #000; margin: 4px 0; }
+          .row { display: flex; justify-content: space-between; gap: 6px; }
+          .item { margin-bottom: 3px; }
+          .item-name { font-weight: bold; }
+          .item-row { display: flex; justify-content: space-between; font-size: 10px; }
+          .item-row.discount { color: #333; }
+          .totals .row { font-size: 11px; padding: 1px 0; }
+          .grand-total { font-weight: bold; font-size: 13px; border-top: 1px dashed #000; padding-top: 3px; margin-top: 3px; }
+          .footer { text-align: center; font-size: 9px; margin-top: 6px; }
+        </style>
+      </head>
+      <body>
+        <div class="center">
+          <div class="shop-name">${escapeHtml(shopName)}</div>
+          ${shop?.shopAddress ? `<div class="muted">${escapeHtml(shop.shopAddress)}</div>` : ""}
+          ${shop?.mobileNumber ? `<div class="muted">Ph: ${escapeHtml(shop.mobileNumber)}</div>` : ""}
+          ${shop?.gstNumber ? `<div class="muted">GSTIN: ${escapeHtml(shop.gstNumber)}</div>` : ""}
+        </div>
+ 
+        <div class="divider"></div>
+ 
+        <div class="row">
+          <span>Invoice: ${escapeHtml(invoice.invoiceNumber)}</span>
+        </div>
+        <div class="row">
+          <span>${formatReceiptDate(invoice.invoiceDate)}</span>
+        </div>
+        ${invoice.customerName ? `<div class="row"><span>Customer: ${escapeHtml(invoice.customerName)}</span></div>` : ""}
+        ${invoice.customerMobile ? `<div class="row"><span>Mobile: ${escapeHtml(invoice.customerMobile)}</span></div>` : ""}
+        <div class="row">
+          <span>Served by: ${escapeHtml(invoice.createdByUsername)}</span>
+        </div>
+ 
+        <div class="divider"></div>
+ 
+        ${itemsHtml}
+ 
+        <div class="divider"></div>
+ 
+        <div class="totals">
+          <div class="row">
+            <span>Subtotal</span>
+            <span>${formatMoney(invoice.subtotal)}</span>
+          </div>
+          ${invoice.discountAmount > 0 ? `<div class="row"><span>Discount</span><span>-${formatMoney(invoice.discountAmount)}</span></div>` : ""}
+          ${invoice.taxAmount > 0 ? `<div class="row"><span>Tax</span><span>${formatMoney(invoice.taxAmount)}</span></div>` : ""}
+          <div class="row grand-total">
+            <span>TOTAL</span>
+            <span>${formatMoney(invoice.grandTotal)}</span>
+          </div>
+        </div>
+ 
+        ${invoice.notes ? `<div class="divider"></div><div class="muted">Note: ${escapeHtml(invoice.notes)}</div>` : ""}
+ 
+        <div class="divider"></div>
+ 
+        <div class="footer">
+          ${shop?.footerMessage ? escapeHtml(shop.footerMessage) : "Thank you for shopping with us!"}
+        </div>
+      </body>
+    </html>
+  `;
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!doc) return;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  setTimeout(() => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch {
+      // no-op
+    }
+  }, 200);
+
+  setTimeout(() => {
+    document.body.removeChild(iframe);
+  }, 60_000);
+}
