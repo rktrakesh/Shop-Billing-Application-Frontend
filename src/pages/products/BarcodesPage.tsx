@@ -8,18 +8,23 @@ import { Card, CardHeader, CardTitle, CardContent, Badge } from "@/components/ui
 import { PageHeader, EmptyState } from "@/components/common";
 import { formatCurrency } from "@/utils";
 import type { ProductVariantResponse } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
 import toast from "react-hot-toast";
 
 export default function BarcodesPage() {
   const qc = useQueryClient();
+  const { isAdmin } = useAuth();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<ProductVariantResponse | null>(null);
   const [printQty, setPrintQty] = useState(1);
   const [printing, setPrinting] = useState(false);
 
+  // GET /api/settings is restricted to ADMIN at the security-filter level,
+  // so only fetch it for admins; managers get the default shop name below.
   const { data: settingsRes } = useQuery({
     queryKey: ["shop-settings"],
     queryFn: () => settingsService.get(),
+    enabled: isAdmin,
   });
   const shopName = settingsRes?.data?.data?.shopName || "RKT APPARELS";
 

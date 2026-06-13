@@ -1,21 +1,36 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { FileText, Download, Eye, Printer, Receipt } from "lucide-react";
-import { invoiceService, settingsService, downloadBlob, printBlob, printReceipt } from "@/services";
+import { useState, useMemo, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { FileText, Download, Eye, Printer, Receipt, Undo2, AlertTriangle } from "lucide-react";
+import { invoiceService, settingsService, returnService, downloadBlob, printBlob, printReceipt } from "@/services";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody } from "@/components/ui/index";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/index";
 import { DataTable } from "@/components/common/DataTable";
 import { PageHeader } from "@/components/common";
 import { formatCurrency, formatDateTime } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import type { InvoiceResponse } from "@/types";
+import type { InvoiceItemResponse, InvoiceResponse, ItemReturnRequest } from "@/types";
+import { CustomerHistoryDialog } from "@/components/customers/CustomerHistoryDialog";
 import toast from "react-hot-toast";
 
+// Per-line-item state inside the Return dialog
+interface ReturnLineState {
+  quantity: number; // quantity the user wants to return now
+  refundAmount: number;
+  reason: string;
+}
+
 export default function InvoicesPage() {
+  const qc = useQueryClient();
   const { isAdmin, isManager } = useAuth();
   const [viewing, setViewing] = useState<InvoiceResponse | null>(null);
+  const [returningInvoice, setReturningInvoice] = useState<InvoiceResponse | null>(null);
+  const [returnLines, setReturnLines] = useState<Record<number, ReturnLineState>>({});
+  const [historyInvoice, setHistoryInvoice] = useState<InvoiceResponse | null>(null);
 
   const canViewAll = isAdmin || isManager;
+  const canReturn = true; // all roles can process returns
+  const canSeeAmounts = isAdmin || isManager; // USER cannot see refund/money amounts
 
   const { data: res, isLoading } = useQuery({
     queryKey: ["invoices", canViewAll],
@@ -23,13 +38,47 @@ export default function InvoicesPage() {
   });
   const invoices = res?.data?.data ?? [];
 
-  // Shop settings used for the thermal receipt header/footer
+  // Shop settings used for the thermal receipt header/footer.
+  // GET /api/settings is restricted to ADMIN at the security-filter level,
+  // so only fetch it for admins; managers get a default header.
   const { data: shopSettingsRes } = useQuery({
     queryKey: ["shop-settings"],
     queryFn: () => settingsService.get(),
     staleTime: 5 * 60_000,
+    enabled: isAdmin,
   });
   const shopSettings = shopSettingsRes?.data?.data;
+
+  // Already-returned quantities for the invoice currently being returned
+  const { data: existingReturnsRes, isLoading: returnsLoading } = useQuery({
+    queryKey: ["returns-by-invoice", returningInvoice?.id],
+    queryFn: () => returnService.getByInvoice(returningInvoice!.id),
+    enabled: !!returningInvoice,
+  });
+  const existingReturns = existingReturnsRes?.data?.data ?? [];
+
+  // Map: invoiceItemId -> total quantity already returned
+  const alreadyReturnedMap = useMemo(() => {
+    const map: Record<number, number> = {};
+    for (const r of existingReturns) {
+      map[r.invoiceItemId] = (map[r.invoiceItemId] ?? 0) + r.quantity;
+    }
+    return map;
+  }, [existingReturns]);
+
+  // Initialize return line state when dialog opens / returns data loads
+  useEffect(() => {
+    if (!returningInvoice) {
+      setReturnLines({});
+      return;
+    }
+    const initial: Record<number, ReturnLineState> = {};
+    for (const item of returningInvoice.items) {
+      initial[item.id] = { quantity: 0, refundAmount: 0, reason: "" };
+    }
+    setReturnLines(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [returningInvoice?.id, existingReturnsRes]);
 
   const handleDownload = async (id: number, num: string) => {
     try {
@@ -53,6 +102,73 @@ export default function InvoicesPage() {
     printReceipt(invoice, shopSettings);
   };
 
+  // ── Return dialog helpers ─────────────────────────────────────
+
+  const availableToReturn = (item: InvoiceItemResponse) => {
+    const already = alreadyReturnedMap[item.id] ?? 0;
+    return Math.max(0, item.quantity - already);
+  };
+
+  // Proportional unit price after discount, used as the default refund per unit
+  const effectiveUnitPrice = (item: InvoiceItemResponse) => {
+    const netLineTotal = item.lineTotal; // already qty*price - discount
+    return item.quantity > 0 ? netLineTotal / item.quantity : 0;
+  };
+
+  const updateReturnLine = (itemId: number, patch: Partial<ReturnLineState>) => {
+    setReturnLines((prev) => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], ...patch },
+    }));
+  };
+
+  const setReturnQuantity = (item: InvoiceItemResponse, qty: number) => {
+    const max = availableToReturn(item);
+    const clamped = Math.max(0, Math.min(max, qty));
+    const unitPrice = effectiveUnitPrice(item);
+    updateReturnLine(item.id, {
+      quantity: clamped,
+      refundAmount: Math.round(clamped * unitPrice * 100) / 100,
+    });
+  };
+
+  const returnMutation = useMutation({
+    mutationFn: (req: ItemReturnRequest) => returnService.create(req),
+  });
+
+  const handleProcessReturns = async () => {
+    if (!returningInvoice) return;
+    const linesToProcess = returningInvoice.items.filter((item) => (returnLines[item.id]?.quantity ?? 0) > 0);
+
+    if (linesToProcess.length === 0) {
+      toast.error("Select at least one item to return");
+      return;
+    }
+
+    try {
+      for (const item of linesToProcess) {
+        const line = returnLines[item.id];
+        await returnMutation.mutateAsync({
+          invoiceId: returningInvoice.id,
+          invoiceItemId: item.id,
+          quantity: line.quantity,
+          refundAmount: line.refundAmount,
+          reason: line.reason || undefined,
+        });
+      }
+      toast.success("Return processed successfully");
+      qc.invalidateQueries({ queryKey: ["returns-by-invoice", returningInvoice.id] });
+      qc.invalidateQueries({ queryKey: ["returns"] });
+      qc.invalidateQueries({ queryKey: ["all-variants"] });
+      qc.invalidateQueries({ queryKey: ["low-stock"] });
+      setReturningInvoice(null);
+    } catch {
+      toast.error("Failed to process return");
+    }
+  };
+
+  const totalRefund = Object.values(returnLines).reduce((s, l) => s + (l.refundAmount || 0), 0);
+
   return (
     <div>
       <PageHeader title="Invoices" subtitle={canViewAll ? "All invoices generated in the system" : "Invoices you have created"} />
@@ -65,7 +181,19 @@ export default function InvoicesPage() {
             searchPlaceholder="Search by invoice # or customer..."
             emptyMessage="No invoices found."
             columns={[
-              { key: "invoiceNumber", header: "Invoice #", sortable: true, render: (r) => <span className="font-mono text-xs text-primary">{(r as unknown as InvoiceResponse).invoiceNumber}</span> },
+              {
+                key: "invoiceNumber",
+                header: "Invoice #",
+                sortable: true,
+                render: (r) => {
+                  const inv = r as unknown as InvoiceResponse;
+                  return (
+                    <button className="font-mono text-xs text-primary hover:underline" onClick={() => setHistoryInvoice(inv)} title="View customer history">
+                      {inv.invoiceNumber}
+                    </button>
+                  );
+                },
+              },
               { key: "customerName", header: "Customer", render: (r) => (r as unknown as InvoiceResponse).customerName || "Walk-in" },
               { key: "invoiceDate", header: "Date", sortable: true, render: (r) => formatDateTime((r as unknown as InvoiceResponse).invoiceDate) },
               { key: "items", header: "Items", render: (r) => <Badge variant="muted">{(r as unknown as InvoiceResponse).items?.length ?? 0}</Badge> },
@@ -79,6 +207,11 @@ export default function InvoicesPage() {
                   <Button size="icon-sm" variant="ghost" onClick={() => setViewing(inv)}>
                     <Eye className="h-3.5 w-3.5" />
                   </Button>
+                  {canReturn && (
+                    <Button size="icon-sm" variant="ghost" onClick={() => setReturningInvoice(inv)} title="Return Items">
+                      <Undo2 className="h-3.5 w-3.5 text-warning" />
+                    </Button>
+                  )}
                   <Button size="icon-sm" variant="ghost" onClick={() => handlePrintReceipt(inv)} title="Print Receipt">
                     <Receipt className="h-3.5 w-3.5" />
                   </Button>
@@ -170,7 +303,20 @@ export default function InvoicesPage() {
 
               {viewing.notes && <p className="mt-4 text-xs text-text-muted border-t border-border/30 pt-3">Notes: {viewing.notes}</p>}
 
-              <div className="flex gap-2 mt-4">
+              <div className="flex flex-wrap gap-2 mt-4">
+                {canReturn && (
+                  <Button
+                    className="flex-1"
+                    variant="outline"
+                    onClick={() => {
+                      setReturningInvoice(viewing);
+                      setViewing(null);
+                    }}
+                  >
+                    <Undo2 className="h-4 w-4" />
+                    Return Items
+                  </Button>
+                )}
                 <Button className="flex-1" variant="outline" onClick={() => handlePrintReceipt(viewing)}>
                   <Receipt className="h-4 w-4" />
                   Print Receipt
@@ -188,6 +334,81 @@ export default function InvoicesPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Return Items Dialog */}
+      <Dialog open={!!returningInvoice} onOpenChange={(o) => !o && setReturningInvoice(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Undo2 className="h-4 w-4 text-warning" />
+              Return Items — {returningInvoice?.invoiceNumber}
+            </DialogTitle>
+          </DialogHeader>
+          {returningInvoice && (
+            <DialogBody>
+              {returnsLoading ? (
+                <p className="text-sm text-text-muted text-center py-6">Loading return history...</p>
+              ) : (
+                <div className="space-y-3">
+                  {returningInvoice.items.map((item) => {
+                    const already = alreadyReturnedMap[item.id] ?? 0;
+                    const available = availableToReturn(item);
+                    const line = returnLines[item.id] ?? { quantity: 0, refundAmount: 0, reason: "" };
+
+                    return (
+                      <div key={item.id} className="p-3 rounded-lg border border-border/30">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div>
+                            <p className="text-sm font-medium text-text-primary">{item.designName}</p>
+                            <p className="text-xs text-text-muted">
+                              {[item.color, item.size, item.productCode].filter(Boolean).join(" · ")} · Purchased: {item.quantity}
+                              {already > 0 && <span className="text-warning"> · Already returned: {already}</span>}
+                            </p>
+                          </div>
+                          {canSeeAmounts && <span className="text-sm font-medium text-text-secondary whitespace-nowrap">{formatCurrency(effectiveUnitPrice(item))}/unit</span>}
+                        </div>
+
+                        {available === 0 ? (
+                          <p className="text-xs text-text-muted italic">Fully returned — nothing left to return.</p>
+                        ) : (
+                          <div className={`grid grid-cols-2 ${canSeeAmounts ? "sm:grid-cols-3" : ""} gap-2`}>
+                            <Input label={`Qty to return (max ${available})`} type="number" min={0} max={available} value={line.quantity || ""} onChange={(e) => setReturnQuantity(item, parseInt(e.target.value) || 0)} />
+                            {canSeeAmounts && <Input label="Refund amount (₹)" type="number" min={0} step="0.01" value={line.refundAmount || ""} onChange={(e) => updateReturnLine(item.id, { refundAmount: Math.max(0, parseFloat(e.target.value) || 0) })} disabled={line.quantity === 0} />}
+                            <Input label="Reason (optional)" placeholder="e.g. Size issue, damaged" value={line.reason} onChange={(e) => updateReturnLine(item.id, { reason: e.target.value })} disabled={line.quantity === 0} className={canSeeAmounts ? "col-span-2 sm:col-span-1" : ""} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/10 border border-warning/20">
+                    <AlertTriangle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-text-secondary">Returned items will be added back to stock automatically. The original invoice total stays unchanged for record-keeping — refunds are tracked separately and subtracted from sales/profit reports.</p>
+                  </div>
+
+                  {canSeeAmounts && (
+                    <div className="flex justify-between items-center pt-2 border-t border-border/30">
+                      <span className="text-sm text-text-muted">Total refund</span>
+                      <span className="text-lg font-bold text-warning">{formatCurrency(totalRefund)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </DialogBody>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReturningInvoice(null)}>
+              Cancel
+            </Button>
+            <Button variant="warning" onClick={handleProcessReturns} loading={returnMutation.isPending} disabled={totalRefund === 0}>
+              Process Return
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Customer History Dialog */}
+      <CustomerHistoryDialog open={!!historyInvoice} onClose={() => setHistoryInvoice(null)} customerId={historyInvoice?.customerId} walkInName={historyInvoice?.customerName} walkInMobile={historyInvoice?.customerMobile} />
     </div>
   );
 }

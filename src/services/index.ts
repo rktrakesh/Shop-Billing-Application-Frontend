@@ -26,6 +26,8 @@ import type {
   ShopSettingsRequest,
   ShopSettingsResponse,
   AuditLogResponse,
+  ItemReturnRequest,
+  ItemReturnResponse,
 } from "@/types";
 
 // ── Auth ─────────────────────────────────────────────────────
@@ -141,6 +143,13 @@ export const settingsService = {
 export const auditLogService = {
   getAll: () => axiosInstance.get<ApiResponse<AuditLogResponse[]>>(ENDPOINTS.AUDIT_LOGS),
   getRecent: (limit = 50) => axiosInstance.get<ApiResponse<AuditLogResponse[]>>(ENDPOINTS.AUDIT_LOGS_RECENT, { params: { limit } }),
+};
+
+// ── Returns ───────────────────────────────────────────────────
+export const returnService = {
+  create: (data: ItemReturnRequest) => axiosInstance.post<ApiResponse<ItemReturnResponse>>(ENDPOINTS.RETURNS, data),
+  getAll: () => axiosInstance.get<ApiResponse<ItemReturnResponse[]>>(ENDPOINTS.RETURNS_ALL),
+  getByInvoice: (invoiceId: number) => axiosInstance.get<ApiResponse<ItemReturnResponse[]>>(ENDPOINTS.RETURNS_BY_INVOICE(invoiceId)),
 };
 
 // ── Utility: Download blob as file ────────────────────────────
@@ -282,7 +291,7 @@ export function printLabels(blob: Blob, quantity: number, widthMm = 60, heightMm
 // from invoice + shop settings data already available on the frontend,
 // and opens the browser print dialog. Change RECEIPT_WIDTH_MM below to
 // match your thermal receipt roll (e.g. 58mm or 80mm).
-export const RECEIPT_WIDTH_MM = 105;
+export const RECEIPT_WIDTH_MM = 80;
 
 function escapeHtml(str: string | number | undefined | null): string {
   if (str === undefined || str === null) return "";
@@ -365,9 +374,9 @@ export function printReceipt(invoice: InvoiceResponse, shop?: ShopSettingsRespon
           ${shop?.mobileNumber ? `<div class="muted">Ph: ${escapeHtml(shop.mobileNumber)}</div>` : ""}
           ${shop?.gstNumber ? `<div class="muted">GSTIN: ${escapeHtml(shop.gstNumber)}</div>` : ""}
         </div>
- 
+
         <div class="divider"></div>
- 
+
         <div class="row">
           <span>Invoice: ${escapeHtml(invoice.invoiceNumber)}</span>
         </div>
@@ -379,13 +388,13 @@ export function printReceipt(invoice: InvoiceResponse, shop?: ShopSettingsRespon
         <div class="row">
           <span>Served by: ${escapeHtml(invoice.createdByUsername)}</span>
         </div>
- 
+
         <div class="divider"></div>
- 
+
         ${itemsHtml}
- 
+
         <div class="divider"></div>
- 
+
         <div class="totals">
           <div class="row">
             <span>Subtotal</span>
@@ -398,11 +407,11 @@ export function printReceipt(invoice: InvoiceResponse, shop?: ShopSettingsRespon
             <span>${formatMoney(invoice.grandTotal)}</span>
           </div>
         </div>
- 
+
         ${invoice.notes ? `<div class="divider"></div><div class="muted">Note: ${escapeHtml(invoice.notes)}</div>` : ""}
- 
+
         <div class="divider"></div>
- 
+
         <div class="footer">
           ${shop?.footerMessage ? escapeHtml(shop.footerMessage) : "Thank you for shopping with us!"}
         </div>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/index";
 import { formatCurrency } from "@/utils";
+import { useAuth } from "@/contexts/AuthContext";
 import type { CartItem, CustomerResponse, InvoiceRequest, InvoiceResponse, ProductVariantResponse } from "@/types";
 import toast from "react-hot-toast";
 
@@ -33,6 +34,7 @@ const customerSchema = z.object({
 type CustomerForm = z.infer<typeof customerSchema>;
 
 export default function BillingPage() {
+  const { isAdmin } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [productSearch, setProductSearch] = useState("");
@@ -257,11 +259,14 @@ export default function BillingPage() {
 
   const [printing, setPrinting] = useState(false);
 
-  // Shop settings used for the thermal receipt header/footer
+  // Shop settings used for the thermal receipt header/footer.
+  // GET /api/settings is restricted to ADMIN at the security-filter level,
+  // so only fetch it for admins; managers/cashiers get a default header.
   const { data: shopSettingsRes } = useQuery({
     queryKey: ["shop-settings"],
     queryFn: () => settingsService.get(),
     staleTime: 5 * 60_000,
+    enabled: isAdmin,
   });
   const shopSettings = shopSettingsRes?.data?.data;
 
