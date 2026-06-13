@@ -131,4 +131,12 @@ export const ENDPOINTS = {
   AUDIT_LOGS: "/api/audit-logs",
   // GET ?limit=50 → AuditLogResponse[]
   AUDIT_LOGS_RECENT: "/api/audit-logs/recent",
+
+  // ── Returns (ADMIN/MANAGER only) ──────────────────────────
+  // POST { invoiceId, invoiceItemId, quantity, refundAmount, reason } → ItemReturnResponse
+  RETURNS: "/api/returns",
+  // GET → ItemReturnResponse[]
+  RETURNS_ALL: "/api/returns",
+  // GET → ItemReturnResponse[]
+  RETURNS_BY_INVOICE: (invoiceId: number | string) => `/api/returns/invoice/${invoiceId}`,
 };

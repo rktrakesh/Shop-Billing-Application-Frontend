@@ -341,6 +341,32 @@ export interface AuditLogResponse {
   createdAt: string;
 }
 
+// ── Returns ───────────────────────────────────────────────────
+
+export interface ItemReturnRequest {
+  invoiceId: number;
+  invoiceItemId: number;
+  quantity: number;
+  refundAmount: number;
+  reason?: string;
+}
+
+export interface ItemReturnResponse {
+  id: number;
+  invoiceId: number;
+  invoiceNumber: string;
+  invoiceItemId: number;
+  designName: string;
+  color?: string;
+  size?: string;
+  productCode?: string;
+  quantity: number;
+  refundAmount: number;
+  reason?: string;
+  returnedByUsername: string;
+  createdAt: string;
+}
+
 // ── UI / Cart (frontend-only) ─────────────────────────────────
 
 export interface CartItem {

@@ -1,28 +1,29 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider, useAuth } from '@/contexts/AuthContext'
-import { ProtectedRoute } from '@/routes/ProtectedRoute'
-import { AppLayout } from '@/layouts/AppLayout'
+import { Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/routes/ProtectedRoute";
+import { AppLayout } from "@/layouts/AppLayout";
 
-import LoginPage from '@/pages/auth/LoginPage'
-import DashboardPage from '@/pages/dashboard/DashboardPage'
-import BillingPage from '@/pages/billing/BillingPage'
-import InvoicesPage from '@/pages/billing/InvoicesPage'
-import ProductsPage from '@/pages/products/ProductsPage'
-import VariantsPage from '@/pages/products/VariantsPage'
-import BarcodesPage from '@/pages/products/BarcodesPage'
-import InventoryPage from '@/pages/inventory/InventoryPage'
-import CustomersPage from '@/pages/customers/CustomersPage'
-import ReportsPage from '@/pages/reports/ReportsPage'
-import ProfitPage from '@/pages/profit/ProfitPage'
-import UsersPage from '@/pages/users/UsersPage'
-import SettingsPage from '@/pages/settings/SettingsPage'
-import AuditLogPage from '@/pages/audit/AuditLogPage'
-import { NotFoundPage, ForbiddenPage, ServerErrorPage } from '@/pages/errors/ErrorPages'
+import LoginPage from "@/pages/auth/LoginPage";
+import DashboardPage from "@/pages/dashboard/DashboardPage";
+import BillingPage from "@/pages/billing/BillingPage";
+import InvoicesPage from "@/pages/billing/InvoicesPage";
+import ProductsPage from "@/pages/products/ProductsPage";
+import VariantsPage from "@/pages/products/VariantsPage";
+import BarcodesPage from "@/pages/products/BarcodesPage";
+import InventoryPage from "@/pages/inventory/InventoryPage";
+import CustomersPage from "@/pages/customers/CustomersPage";
+import ReportsPage from "@/pages/reports/ReportsPage";
+import ReturnsPage from "@/pages/returns/ReturnsPage";
+import ProfitPage from "@/pages/profit/ProfitPage";
+import UsersPage from "@/pages/users/UsersPage";
+import SettingsPage from "@/pages/settings/SettingsPage";
+import AuditLogPage from "@/pages/audit/AuditLogPage";
+import { NotFoundPage, ForbiddenPage, ServerErrorPage } from "@/pages/errors/ErrorPages";
 
 function HomeRedirect() {
-  const { user } = useAuth()
-  if (user?.role === 'ROLE_USER') return <Navigate to="/billing" replace />
-  return <Navigate to="/dashboard" replace />
+  const { user } = useAuth();
+  if (user?.role === "ROLE_USER") return <Navigate to="/billing" replace />;
+  return <Navigate to="/dashboard" replace />;
 }
 
 function AppRoutes() {
@@ -39,7 +40,7 @@ function AppRoutes() {
           <Route path="/" element={<HomeRedirect />} />
 
           {/* Admin & Manager only */}
-          <Route element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_MANAGER']} />}>
+          <Route element={<ProtectedRoute allowedRoles={["ROLE_ADMIN", "ROLE_MANAGER"]} />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/variants" element={<VariantsPage />} />
@@ -52,9 +53,10 @@ function AppRoutes() {
           <Route path="/billing" element={<BillingPage />} />
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/customers" element={<CustomersPage />} />
+          <Route path="/returns" element={<ReturnsPage />} />
 
           {/* Admin only */}
-          <Route element={<ProtectedRoute allowedRoles={['ROLE_ADMIN']} />}>
+          <Route element={<ProtectedRoute allowedRoles={["ROLE_ADMIN"]} />}>
             <Route path="/profit" element={<ProfitPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/settings" element={<SettingsPage />} />
@@ -66,7 +68,7 @@ function AppRoutes() {
       {/* 404 */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
-  )
+  );
 }
 
 export default function App() {
@@ -74,5 +76,5 @@ export default function App() {
     <AuthProvider>
       <AppRoutes />
     </AuthProvider>
-  )
+  );
 }
