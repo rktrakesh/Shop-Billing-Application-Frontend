@@ -109,10 +109,25 @@ export default function InvoicesPage() {
     return Math.max(0, item.quantity - already);
   };
 
-  // Proportional unit price after discount, used as the default refund per unit
-  const effectiveUnitPrice = (item: InvoiceItemResponse) => {
-    const netLineTotal = item.lineTotal; // already qty*price - discount
-    return item.quantity > 0 ? netLineTotal / item.quantity : 0;
+  // The price printed on the tag/barcode (before any discounts)
+  const tagUnitPrice = (item: InvoiceItemResponse) => item.unitPrice;
+
+  // The actual amount the customer paid per unit, after BOTH the item-level
+  // discount AND a proportional share of the invoice-level discount.
+  // This is the correct basis for refunds.
+  const actualUnitPrice = (item: InvoiceItemResponse) => {
+    if (!returningInvoice || item.quantity === 0) return 0;
+    const netLineTotal = item.lineTotal; // qty*price - item discount
+    const subtotal = returningInvoice.subtotal;
+    const invoiceDiscount = returningInvoice.discountAmount || 0;
+
+    let proportionalDiscount = 0;
+    if (subtotal > 0 && invoiceDiscount > 0) {
+      proportionalDiscount = (netLineTotal / subtotal) * invoiceDiscount;
+    }
+
+    const actualPaidForLine = netLineTotal - proportionalDiscount;
+    return actualPaidForLine / item.quantity;
   };
 
   const updateReturnLine = (itemId: number, patch: Partial<ReturnLineState>) => {
@@ -124,8 +139,8 @@ export default function InvoicesPage() {
 
   const setReturnQuantity = (item: InvoiceItemResponse, qty: number) => {
     const max = availableToReturn(item);
-    const clamped = Math.max(0, Math.min(max, qty));
-    const unitPrice = effectiveUnitPrice(item);
+    const clamped = Math.min(max, Math.max(0, qty));
+    const unitPrice = actualUnitPrice(item);
     updateReturnLine(item.id, {
       quantity: clamped,
       refundAmount: Math.round(clamped * unitPrice * 100) / 100,
@@ -365,7 +380,12 @@ export default function InvoicesPage() {
                               {already > 0 && <span className="text-warning"> · Already returned: {already}</span>}
                             </p>
                           </div>
-                          {canSeeAmounts && <span className="text-sm font-medium text-text-secondary whitespace-nowrap">{formatCurrency(effectiveUnitPrice(item))}/unit</span>}
+                          {canSeeAmounts && (
+                            <div className="text-right whitespace-nowrap">
+                              {tagUnitPrice(item) !== actualUnitPrice(item) && <p className="text-xs text-text-muted line-through">{formatCurrency(tagUnitPrice(item))} tag</p>}
+                              <p className="text-sm font-medium text-text-secondary">{formatCurrency(actualUnitPrice(item))}/unit paid</p>
+                            </div>
+                          )}
                         </div>
 
                         {available === 0 ? (

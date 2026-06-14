@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { User, Phone, MapPin, FileText, Undo2 } from "lucide-react";
+import { User, Phone, MapPin, FileText, Undo2, Info } from "lucide-react";
 import { customerService, invoiceService, returnService } from "@/services";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, Badge, Skeleton } from "@/components/ui/index";
 import { formatCurrency, formatDate, formatDateTime } from "@/utils";
@@ -30,9 +30,10 @@ export function CustomerHistoryDialog({ open, onClose, customerId, invoiceId, wa
   });
   const resolvedInvoice = invoiceRes?.data?.data;
   const resolvedCustomerId = customerId ?? resolvedInvoice?.customerId;
-  const resolvedWalkInName = walkInName ?? resolvedInvoice?.customerName;
-  const resolvedWalkInMobile = walkInMobile ?? resolvedInvoice?.customerMobile;
+  const resolvedName = walkInName ?? resolvedInvoice?.customerName;
+  const resolvedMobile = walkInMobile ?? resolvedInvoice?.customerMobile;
 
+  // Path A: registered customer (has customerId)
   const { data: customerRes, isLoading: customerLoading } = useQuery({
     queryKey: ["customer", resolvedCustomerId],
     queryFn: () => customerService.getById(resolvedCustomerId!),
@@ -40,27 +41,41 @@ export function CustomerHistoryDialog({ open, onClose, customerId, invoiceId, wa
   });
   const customer = customerRes?.data?.data;
 
-  const { data: purchasesRes, isLoading: purchasesLoading } = useQuery({
+  const { data: purchasesByIdRes, isLoading: purchasesByIdLoading } = useQuery({
     queryKey: ["customer-purchases", resolvedCustomerId],
     queryFn: () => customerService.getPurchaseHistory(resolvedCustomerId!),
     enabled: open && !!resolvedCustomerId,
   });
-  const purchases = purchasesRes?.data?.data ?? [];
 
-  // Fetch all returns once and filter client-side by this customer's invoice numbers
+  // Path B: walk-in with a mobile number (no customerId, but mobile is on file)
+  const isWalkInWithMobile = !resolvedCustomerId && !!resolvedMobile;
+  const { data: purchasesByMobileRes, isLoading: purchasesByMobileLoading } = useQuery({
+    queryKey: ["invoices-by-mobile", resolvedMobile],
+    queryFn: () => invoiceService.getByMobile(resolvedMobile!),
+    enabled: open && isWalkInWithMobile,
+  });
+
+  // Pick whichever source applies
+  const purchases: InvoiceResponse[] = resolvedCustomerId ? (purchasesByIdRes?.data?.data ?? []) : (purchasesByMobileRes?.data?.data ?? []);
+  const purchasesLoading = resolvedCustomerId ? purchasesByIdLoading : purchasesByMobileLoading;
+
+  // History is available if we have a customerId OR a mobile number to search by
+  const hasHistory = !!resolvedCustomerId || isWalkInWithMobile;
+
+  // Fetch all returns once and filter client-side by matching invoice numbers
   const { data: returnsRes, isLoading: returnsLoading } = useQuery({
     queryKey: ["returns"],
     queryFn: () => returnService.getAll(),
-    enabled: open && !!resolvedCustomerId,
+    enabled: open && hasHistory,
   });
   const allReturns = returnsRes?.data?.data ?? [];
 
   const invoiceNumbers = new Set(purchases.map((p) => p.invoiceNumber));
-  const customerReturns = allReturns.filter((r) => invoiceNumbers.has(r.invoiceNumber));
+  const relatedReturns = allReturns.filter((r) => invoiceNumbers.has(r.invoiceNumber));
 
   const totalPurchased = purchases.reduce((s, p) => s + p.grandTotal, 0);
-  const totalReturned = customerReturns.reduce((s, r) => s + r.refundAmount, 0);
-  const totalReturnedQty = customerReturns.reduce((s, r) => s + r.quantity, 0);
+  const totalReturned = relatedReturns.reduce((s, r) => s + r.refundAmount, 0);
+  const totalReturnedQty = relatedReturns.reduce((s, r) => s + r.quantity, 0);
   const netTotal = totalPurchased - totalReturned;
 
   const loading = invoiceLoading || customerLoading || purchasesLoading || returnsLoading;
@@ -81,17 +96,16 @@ export function CustomerHistoryDialog({ open, onClose, customerId, invoiceId, wa
               <Skeleton className="h-16 w-full rounded-lg" />
               <Skeleton className="h-24 w-full rounded-lg" />
             </div>
-          ) : !resolvedCustomerId ? (
+          ) : !hasHistory ? (
+            // No customerId AND no mobile — nothing to look up beyond this one invoice
             <div className="text-center py-8">
               <User className="h-8 w-8 text-text-muted mx-auto mb-2 opacity-40" />
               <p className="text-sm text-text-secondary">This was a walk-in sale — no customer record linked.</p>
-              {(resolvedWalkInName || resolvedWalkInMobile) && (
-                <p className="text-xs text-text-muted mt-1">
-                  {resolvedWalkInName}
-                  {resolvedWalkInName && resolvedWalkInMobile ? " · " : ""}
-                  {resolvedWalkInMobile}
-                </p>
-              )}
+              {resolvedName && <p className="text-sm text-text-primary font-medium mt-2">{resolvedName}</p>}
+              <div className="flex items-start gap-2 p-3 mt-4 rounded-lg bg-card/40 text-left">
+                <Info className="h-4 w-4 text-text-muted mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-text-muted">No mobile number was recorded for this sale, so we can't look up this customer's other visits. Only this invoice's details are available.</p>
+              </div>
             </div>
           ) : loading ? (
             <div className="space-y-3">
@@ -103,11 +117,11 @@ export function CustomerHistoryDialog({ open, onClose, customerId, invoiceId, wa
             <div className="space-y-4">
               {/* Customer info */}
               <div className="p-3 rounded-lg border border-border/30">
-                <p className="text-sm font-semibold text-text-primary">{customer?.name}</p>
+                <p className="text-sm font-semibold text-text-primary">{customer?.name ?? resolvedName ?? "Unknown Customer"}</p>
                 <div className="flex flex-wrap gap-4 mt-1.5">
-                  {customer?.mobileNumber && (
+                  {(customer?.mobileNumber ?? resolvedMobile) && (
                     <span className="flex items-center gap-1.5 text-xs text-text-muted">
-                      <Phone className="h-3 w-3" /> {customer.mobileNumber}
+                      <Phone className="h-3 w-3" /> {customer?.mobileNumber ?? resolvedMobile}
                     </span>
                   )}
                   {customer?.address && (
@@ -115,7 +129,7 @@ export function CustomerHistoryDialog({ open, onClose, customerId, invoiceId, wa
                       <MapPin className="h-3 w-3" /> {customer.address}
                     </span>
                   )}
-                  <span className="flex items-center gap-1.5 text-xs text-text-muted">Customer since {formatDate(customer?.createdAt)}</span>
+                  {customer ? <span className="flex items-center gap-1.5 text-xs text-text-muted">Customer since {formatDate(customer.createdAt)}</span> : <Badge variant="muted">Walk-in (matched by mobile)</Badge>}
                 </div>
               </div>
 
@@ -173,11 +187,11 @@ export function CustomerHistoryDialog({ open, onClose, customerId, invoiceId, wa
                 <p className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2 flex items-center gap-1.5">
                   <Undo2 className="h-3.5 w-3.5" /> Return History
                 </p>
-                {customerReturns.length === 0 ? (
+                {relatedReturns.length === 0 ? (
                   <p className="text-sm text-text-muted">No returns recorded.</p>
                 ) : (
                   <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                    {customerReturns.map((r: ItemReturnResponse) => (
+                    {relatedReturns.map((r: ItemReturnResponse) => (
                       <div key={r.id} className="flex items-center justify-between px-3 py-2 rounded-lg border border-warning/20 bg-warning/5 text-sm">
                         <div>
                           <p className="text-text-primary">{r.designName}</p>
