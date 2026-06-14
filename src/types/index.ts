@@ -264,7 +264,8 @@ export interface ReportHistoryResponse {
   startDate: string;
   endDate: string;
   generatedBy: string;
-  createdAt: string;
+  generatedAt: string;
+  fileName?: string;
 }
 
 // ── Profit ────────────────────────────────────────────────────

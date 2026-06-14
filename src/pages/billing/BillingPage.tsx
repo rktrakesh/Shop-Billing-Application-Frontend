@@ -40,6 +40,8 @@ export default function BillingPage() {
   const [productSearch, setProductSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerResponse | null>(null);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [walkInName, setWalkInName] = useState("");
+  const [walkInMobile, setWalkInMobile] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
   const [invoiceDiscountType, setInvoiceDiscountType] = useState<"flat" | "percent">("flat");
   const [invoiceDiscountPercent, setInvoiceDiscountPercent] = useState(0);
@@ -224,6 +226,8 @@ export default function BillingPage() {
       toast.success(`Invoice ${inv.invoiceNumber} created!`);
       setCart([]);
       setSelectedCustomer(null);
+      setWalkInName("");
+      setWalkInMobile("");
       setDiscountAmount(0);
       setInvoiceDiscountType("flat");
       setInvoiceDiscountPercent(0);
@@ -237,10 +241,20 @@ export default function BillingPage() {
       toast.error("Cart is empty");
       return;
     }
+
+    const customerName = selectedCustomer?.name || walkInName.trim();
+    if (!customerName) {
+      toast("Please add customer details (at least a name) before generating the invoice.", {
+        icon: "🧾",
+        duration: 4000,
+      });
+      return;
+    }
+
     const req: InvoiceRequest = {
       customerId: selectedCustomer?.id,
-      customerName: selectedCustomer?.name,
-      customerMobile: selectedCustomer?.mobileNumber,
+      customerName,
+      customerMobile: selectedCustomer?.mobileNumber || walkInMobile.trim() || undefined,
       items: cart.map((item) => ({
         barcode: item.barcode,
         designName: item.designName,
@@ -370,35 +384,48 @@ export default function BillingPage() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-2">
-                <Input placeholder="Search customer by name or mobile..." value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} leftIcon={<Search className="h-4 w-4" />} />
-                {customerSearch.length >= 2 && (
-                  <div className="border border-border/30 rounded-lg overflow-hidden max-h-40 overflow-y-auto bg-card">
-                    {cLoading ? (
-                      <p className="p-3 text-sm text-text-muted">Searching...</p>
-                    ) : customers.length === 0 ? (
-                      <p className="p-3 text-sm text-text-muted">No customers found. Create one?</p>
-                    ) : (
-                      customers.map((c) => (
-                        <button
-                          key={c.id}
-                          className="w-full px-3 py-2.5 text-left hover:bg-card-hover flex items-center justify-between"
-                          onClick={() => {
-                            setSelectedCustomer(c);
-                            setCustomerSearch("");
-                          }}
-                        >
-                          <div>
-                            <p className="text-sm text-text-primary">{c.name}</p>
-                            <p className="text-xs text-text-muted">{c.mobileNumber}</p>
-                          </div>
-                          <Badge variant="muted">{c.totalPurchases} orders</Badge>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-                <p className="text-xs text-text-muted">Leave empty for walk-in customer</p>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Input placeholder="Search registered customer by name or mobile..." value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} leftIcon={<Search className="h-4 w-4" />} />
+                  {customerSearch.length >= 2 && (
+                    <div className="border border-border/30 rounded-lg overflow-hidden max-h-40 overflow-y-auto bg-card">
+                      {cLoading ? (
+                        <p className="p-3 text-sm text-text-muted">Searching...</p>
+                      ) : customers.length === 0 ? (
+                        <p className="p-3 text-sm text-text-muted">No customers found. Create one?</p>
+                      ) : (
+                        customers.map((c) => (
+                          <button
+                            key={c.id}
+                            className="w-full px-3 py-2.5 text-left hover:bg-card-hover flex items-center justify-between"
+                            onClick={() => {
+                              setSelectedCustomer(c);
+                              setCustomerSearch("");
+                            }}
+                          >
+                            <div>
+                              <p className="text-sm text-text-primary">{c.name}</p>
+                              <p className="text-xs text-text-muted">{c.mobileNumber}</p>
+                            </div>
+                            <Badge variant="muted">{c.totalPurchases} orders</Badge>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-px bg-border/30" />
+                  <span className="text-xs text-text-muted">or enter walk-in details</span>
+                  <div className="flex-1 h-px bg-border/30" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Input label="Customer Name *" placeholder="e.g. Suresh Kumar" value={walkInName} onChange={(e) => setWalkInName(e.target.value)} />
+                  <Input label="Mobile (optional)" placeholder="e.g. 9876543210" value={walkInMobile} onChange={(e) => setWalkInMobile(e.target.value)} />
+                </div>
+                <p className="text-xs text-text-muted">A customer name is required to generate the invoice. Mobile number helps us find this customer's purchase/return history later — it's optional but recommended.</p>
               </div>
             )}
           </CardContent>

@@ -64,6 +64,8 @@ export const ENDPOINTS = {
   INVOICE_BY_ID: (id: number | string) => `/api/invoices/${id}`,
   // GET /api/invoices/:id/pdf → PDF bytes
   INVOICE_PDF: (id: number | string) => `/api/invoices/${id}/pdf`,
+  // GET ?mobile=9876543210 → InvoiceResponse[] (all invoices with this customer mobile, walk-in or registered)
+  INVOICES_BY_MOBILE: "/api/invoices/by-mobile",
 
   // ── Inventory ─────────────────────────────────────────────
   // POST { productVariantId, changeType, quantity, reason } → ProductVariantResponse
