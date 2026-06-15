@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/index";
 import { DataTable } from "@/components/common/DataTable";
 import { PageHeader } from "@/components/common";
-import { formatCurrency, formatDateTime } from "@/utils";
+import { formatCurrency, formatDateTime, actualUnitPriceFromLine } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import type { InvoiceItemResponse, InvoiceResponse, ItemReturnRequest } from "@/types";
 import { CustomerHistoryDialog } from "@/components/customers/CustomerHistoryDialog";
@@ -39,13 +39,11 @@ export default function InvoicesPage() {
   const invoices = res?.data?.data ?? [];
 
   // Shop settings used for the thermal receipt header/footer.
-  // GET /api/settings is restricted to ADMIN at the security-filter level,
-  // so only fetch it for admins; managers get a default header.
+  // GET /api/settings is available to all authenticated roles.
   const { data: shopSettingsRes } = useQuery({
     queryKey: ["shop-settings"],
     queryFn: () => settingsService.get(),
     staleTime: 5 * 60_000,
-    enabled: isAdmin,
   });
   const shopSettings = shopSettingsRes?.data?.data;
 
@@ -116,18 +114,8 @@ export default function InvoicesPage() {
   // discount AND a proportional share of the invoice-level discount.
   // This is the correct basis for refunds.
   const actualUnitPrice = (item: InvoiceItemResponse) => {
-    if (!returningInvoice || item.quantity === 0) return 0;
-    const netLineTotal = item.lineTotal; // qty*price - item discount
-    const subtotal = returningInvoice.subtotal;
-    const invoiceDiscount = returningInvoice.discountAmount || 0;
-
-    let proportionalDiscount = 0;
-    if (subtotal > 0 && invoiceDiscount > 0) {
-      proportionalDiscount = (netLineTotal / subtotal) * invoiceDiscount;
-    }
-
-    const actualPaidForLine = netLineTotal - proportionalDiscount;
-    return actualPaidForLine / item.quantity;
+    if (!returningInvoice) return 0;
+    return actualUnitPriceFromLine(item.lineTotal, item.quantity, returningInvoice.subtotal, returningInvoice.discountAmount || 0);
   };
 
   const updateReturnLine = (itemId: number, patch: Partial<ReturnLineState>) => {

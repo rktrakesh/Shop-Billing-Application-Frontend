@@ -30,7 +30,7 @@ export type AuditAction =
   | "BACKUP_RESTORED"
   | "SETTINGS_UPDATED";
 
-export type StockChangeType = "PURCHASE" | "SALE" | "RETURN" | "ADJUSTMENT" | "DAMAGED" | "ADD" | "REDUCE";
+export type StockChangeType = "ADD_STOCK" | "SALE" | "RETURN" | "MANUAL_ADJUSTMENT";
 
 export type ReportType = "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY" | "CUSTOM";
 

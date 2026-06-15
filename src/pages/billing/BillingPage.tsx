@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/index";
 import { formatCurrency } from "@/utils";
-import { useAuth } from "@/contexts/AuthContext";
 import type { CartItem, CustomerResponse, InvoiceRequest, InvoiceResponse, ProductVariantResponse } from "@/types";
 import toast from "react-hot-toast";
 
@@ -33,25 +32,80 @@ const customerSchema = z.object({
 });
 type CustomerForm = z.infer<typeof customerSchema>;
 
+// Key used to persist the in-progress sale (cart, customer, discounts) so a
+// refresh or accidental navigation doesn't lose the current transaction.
+const CART_STORAGE_KEY = "rkt-billing-draft";
+
+interface BillingDraft {
+  cart: CartItem[];
+  selectedCustomer: CustomerResponse | null;
+  walkInName: string;
+  walkInMobile: string;
+  discountAmount: number;
+  invoiceDiscountType: "flat" | "percent";
+  invoiceDiscountPercent: number;
+  customTotal: number | "";
+  notes: string;
+}
+
+function loadBillingDraft(): Partial<BillingDraft> {
+  try {
+    const raw = sessionStorage.getItem(CART_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
 export default function BillingPage() {
-  const { isAdmin } = useAuth();
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const draft = useState(() => loadBillingDraft())[0];
+
+  const [cart, setCart] = useState<CartItem[]>(draft.cart ?? []);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [productSearch, setProductSearch] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState<CustomerResponse | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerResponse | null>(draft.selectedCustomer ?? null);
   const [customerSearch, setCustomerSearch] = useState("");
-  const [walkInName, setWalkInName] = useState("");
-  const [walkInMobile, setWalkInMobile] = useState("");
-  const [discountAmount, setDiscountAmount] = useState(0);
-  const [invoiceDiscountType, setInvoiceDiscountType] = useState<"flat" | "percent">("flat");
-  const [invoiceDiscountPercent, setInvoiceDiscountPercent] = useState(0);
-  const [customTotal, setCustomTotal] = useState<number | "">("");
-  const [notes, setNotes] = useState("");
+  const [walkInName, setWalkInName] = useState(draft.walkInName ?? "");
+  const [walkInMobile, setWalkInMobile] = useState(draft.walkInMobile ?? "");
+  const [discountAmount, setDiscountAmount] = useState(draft.discountAmount ?? 0);
+  const [invoiceDiscountType, setInvoiceDiscountType] = useState<"flat" | "percent">(draft.invoiceDiscountType ?? "flat");
+  const [invoiceDiscountPercent, setInvoiceDiscountPercent] = useState(draft.invoiceDiscountPercent ?? 0);
+  const [customTotal, setCustomTotal] = useState<number | "">(draft.customTotal ?? "");
+  const [notes, setNotes] = useState(draft.notes ?? "");
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const [showVariantDialog, setShowVariantDialog] = useState(false);
   const [searchedVariants, setSearchedVariants] = useState<ProductVariantResponse[]>([]);
   const [lastInvoice, setLastInvoice] = useState<InvoiceResponse | null>(null);
   const barcodeRef = useRef<HTMLInputElement>(null);
+
+  // Persist the in-progress sale on every change so a refresh doesn't lose it.
+  useEffect(() => {
+    const toSave: BillingDraft = {
+      cart,
+      selectedCustomer,
+      walkInName,
+      walkInMobile,
+      discountAmount,
+      invoiceDiscountType,
+      invoiceDiscountPercent,
+      customTotal,
+      notes,
+    };
+    try {
+      sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify(toSave));
+    } catch {
+      // sessionStorage unavailable (e.g. private mode) — ignore, cart just won't persist
+    }
+  }, [cart, selectedCustomer, walkInName, walkInMobile, discountAmount, invoiceDiscountType, invoiceDiscountPercent, customTotal, notes]);
+
+  // Clear the saved draft once an invoice has been generated
+  const clearDraft = () => {
+    try {
+      sessionStorage.removeItem(CART_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+  };
 
   // Customer search
   const { data: customerRes, isLoading: cLoading } = useQuery({
@@ -233,6 +287,7 @@ export default function BillingPage() {
       setInvoiceDiscountPercent(0);
       setCustomTotal("");
       setNotes("");
+      clearDraft();
     },
   });
 
@@ -274,13 +329,11 @@ export default function BillingPage() {
   const [printing, setPrinting] = useState(false);
 
   // Shop settings used for the thermal receipt header/footer.
-  // GET /api/settings is restricted to ADMIN at the security-filter level,
-  // so only fetch it for admins; managers/cashiers get a default header.
+  // GET /api/settings is available to all authenticated roles.
   const { data: shopSettingsRes } = useQuery({
     queryKey: ["shop-settings"],
     queryFn: () => settingsService.get(),
     staleTime: 5 * 60_000,
-    enabled: isAdmin,
   });
   const shopSettings = shopSettingsRes?.data?.data;
 
