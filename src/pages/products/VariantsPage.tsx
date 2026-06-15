@@ -43,16 +43,12 @@ export default function VariantsPage() {
   });
   const products = productsRes?.data?.data ?? [];
 
-  // Fetch variants for all products
+  // Fetch all variants in a single call (avoids N+1 per-product requests)
   const { data: variantsRes, isLoading } = useQuery({
-    queryKey: ["all-variants", products.map((p) => p.id)],
-    queryFn: async () => {
-      const all = await Promise.all(products.map((p) => variantService.getByProduct(p.id)));
-      return all.flatMap((r) => r.data.data ?? []);
-    },
-    enabled: products.length > 0,
+    queryKey: ["all-variants"],
+    queryFn: () => variantService.getAll(),
   });
-  const variants = variantsRes ?? [];
+  const variants = variantsRes?.data?.data ?? [];
 
   const {
     register,

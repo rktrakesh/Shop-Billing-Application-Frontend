@@ -47,6 +47,7 @@ export const productService = {
 
 // ── Variants ─────────────────────────────────────────────────
 export const variantService = {
+  getAll: () => axiosInstance.get<ApiResponse<ProductVariantResponse[]>>(ENDPOINTS.VARIANTS),
   getById: (id: number) => axiosInstance.get<ApiResponse<ProductVariantResponse>>(ENDPOINTS.VARIANT_BY_ID(id)),
   getByProduct: (productId: number) => axiosInstance.get<ApiResponse<ProductVariantResponse[]>>(ENDPOINTS.VARIANTS_BY_PRODUCT(productId)),
   getByBarcode: (barcode: string) => axiosInstance.get<ApiResponse<ProductVariantResponse>>(ENDPOINTS.VARIANT_BY_BARCODE(barcode)),

@@ -1,48 +1,34 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { QrCode, Search, Download, FileDown, RefreshCw, Printer } from "lucide-react";
-import { variantService, productService, barcodeService, settingsService, downloadBlob, printLabels } from "@/services";
+import { variantService, barcodeService, settingsService, downloadBlob, printLabels } from "@/services";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, Badge } from "@/components/ui/index";
 import { PageHeader, EmptyState } from "@/components/common";
 import { formatCurrency } from "@/utils";
 import type { ProductVariantResponse } from "@/types";
-import { useAuth } from "@/contexts/AuthContext";
 import toast from "react-hot-toast";
 
 export default function BarcodesPage() {
   const qc = useQueryClient();
-  const { isAdmin } = useAuth();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<ProductVariantResponse | null>(null);
   const [printQty, setPrintQty] = useState(1);
   const [printing, setPrinting] = useState(false);
 
-  // GET /api/settings is restricted to ADMIN at the security-filter level,
-  // so only fetch it for admins; managers get the default shop name below.
+  // GET /api/settings is available to all authenticated roles.
   const { data: settingsRes } = useQuery({
     queryKey: ["shop-settings"],
     queryFn: () => settingsService.get(),
-    enabled: isAdmin,
   });
   const shopName = settingsRes?.data?.data?.shopName || "RKT APPARELS";
 
-  const { data: productsRes } = useQuery({
-    queryKey: ["products-all"],
-    queryFn: () => productService.getAllIncludingInactive(),
-  });
-  const products = productsRes?.data?.data ?? [];
-
   const { data: variantsRes, isLoading } = useQuery({
-    queryKey: ["all-variants", products.map((p) => p.id)],
-    queryFn: async () => {
-      const all = await Promise.all(products.map((p) => variantService.getByProduct(p.id)));
-      return all.flatMap((r) => r.data.data ?? []);
-    },
-    enabled: products.length > 0,
+    queryKey: ["all-variants"],
+    queryFn: () => variantService.getAll(),
   });
-  const variants = variantsRes ?? [];
+  const variants = variantsRes?.data?.data ?? [];
 
   const filtered = variants.filter((v) => !search || v.designName.toLowerCase().includes(search.toLowerCase()) || v.productCode.toLowerCase().includes(search.toLowerCase()) || v.barcode?.includes(search));
 

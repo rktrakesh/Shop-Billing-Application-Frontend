@@ -20,6 +20,7 @@ export const ENDPOINTS = {
   PRODUCT_BY_ID: (id: number | string) => `/api/products/${id}`,
 
   // ── Product Variants ─────────────────────────────────────
+  // GET → ProductVariantResponse[] (all active variants, avoids N+1 per-product calls)
   // POST { productId, productCode, color, size, sellingPrice, costPrice, stock } → ProductVariantResponse
   VARIANTS: "/api/products/variants",
   // GET/PUT/DELETE /api/products/variants/:id
