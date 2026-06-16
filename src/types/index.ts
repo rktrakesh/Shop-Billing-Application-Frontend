@@ -43,6 +43,7 @@ export interface LoginRequest {
 
 export interface AuthResponse {
   token: string;
+  refreshToken: string;
   tokenType: string;
   username: string;
   role: Role;
@@ -389,6 +390,7 @@ export interface CartItem {
 
 export interface AuthUser {
   token: string;
+  refreshToken: string;
   username: string;
   role: Role;
   fullName?: string;

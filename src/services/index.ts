@@ -33,6 +33,7 @@ import type {
 // ── Auth ─────────────────────────────────────────────────────
 export const authService = {
   login: (data: LoginRequest) => axiosInstance.post<ApiResponse<AuthResponse>>(ENDPOINTS.LOGIN, data),
+  refresh: (refreshToken: string) => axiosInstance.post<ApiResponse<AuthResponse>>(ENDPOINTS.REFRESH, { refreshToken }),
 };
 
 // ── Products ─────────────────────────────────────────────────
@@ -293,7 +294,7 @@ export function printLabels(blob: Blob, quantity: number, widthMm = 60, heightMm
 // from invoice + shop settings data already available on the frontend,
 // and opens the browser print dialog. Change RECEIPT_WIDTH_MM below to
 // match your thermal receipt roll (e.g. 58mm or 80mm).
-export const RECEIPT_WIDTH_MM = 110;
+export const RECEIPT_WIDTH_MM = 80;
 
 function escapeHtml(str: string | number | undefined | null): string {
   if (str === undefined || str === null) return "";

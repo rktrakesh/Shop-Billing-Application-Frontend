@@ -9,6 +9,8 @@ export const ENDPOINTS = {
   // ── Authentication ──────────────────────────────────────
   // POST { username, password } → { token, username, role, fullName }
   LOGIN: "/api/auth/login",
+  // POST { refreshToken } → AuthResponse (new access + refresh tokens)
+  REFRESH: "/api/auth/refresh",
 
   // ── Products ─────────────────────────────────────────────
   // GET  → ProductResponse[]
