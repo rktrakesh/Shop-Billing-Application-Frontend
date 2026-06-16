@@ -123,6 +123,7 @@ export const profitService = {
   getMonthlySummary: (year: number, month: number) => axiosInstance.get<ApiResponse<ProfitSummaryResponse>>(ENDPOINTS.PROFIT_SUMMARY_MONTHLY, { params: { year, month } }),
   getYearlySummary: (year: number) => axiosInstance.get<ApiResponse<ProfitSummaryResponse>>(ENDPOINTS.PROFIT_SUMMARY_YEARLY, { params: { year } }),
   downloadSummary: (params: { period: "daily" | "monthly" | "yearly"; date?: string; year?: number; month?: number }) => axiosInstance.get(ENDPOINTS.PROFIT_SUMMARY_DOWNLOAD, { params, responseType: "blob" }),
+  getLastMonthsSummary: (months = 6) => axiosInstance.get<ApiResponse<ProfitSummaryResponse[]>>(ENDPOINTS.PROFIT_SUMMARY_LAST_MONTHS, { params: { months } }),
 };
 
 // ── Users ─────────────────────────────────────────────────────
@@ -294,7 +295,7 @@ export function printLabels(blob: Blob, quantity: number, widthMm = 60, heightMm
 // from invoice + shop settings data already available on the frontend,
 // and opens the browser print dialog. Change RECEIPT_WIDTH_MM below to
 // match your thermal receipt roll (e.g. 58mm or 80mm).
-export const RECEIPT_WIDTH_MM = 80;
+export const RECEIPT_WIDTH_MM = 110;
 
 function escapeHtml(str: string | number | undefined | null): string {
   if (str === undefined || str === null) return "";
