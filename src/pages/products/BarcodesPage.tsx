@@ -5,7 +5,7 @@ import { variantService, barcodeService, settingsService, downloadBlob, printLab
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, Badge } from "@/components/ui/index";
-import { PageHeader, EmptyState } from "@/components/common";
+import { PageHeader, EmptyState, ConfirmDialog } from "@/components/common";
 import { formatCurrency } from "@/utils";
 import type { ProductVariantResponse } from "@/types";
 import toast from "react-hot-toast";
@@ -16,6 +16,11 @@ export default function BarcodesPage() {
   const [selected, setSelected] = useState<ProductVariantResponse | null>(null);
   const [printQty, setPrintQty] = useState(1);
   const [printing, setPrinting] = useState(false);
+  const [confirmLargePrint, setConfirmLargePrint] = useState(false);
+
+  // Soft cap — printing more than this many labels at once is almost
+  // certainly a typo, so confirm before sending it to the printer.
+  const LARGE_PRINT_THRESHOLD = 100;
 
   // GET /api/settings is available to all authenticated roles.
   const { data: settingsRes } = useQuery({
@@ -78,6 +83,16 @@ export default function BarcodesPage() {
     } finally {
       setPrinting(false);
     }
+  };
+
+  // Entry point from the "Print N Labels" button — confirms first if the
+  // quantity looks unintentionally large.
+  const handlePrintClick = (id: number) => {
+    if (printQty > LARGE_PRINT_THRESHOLD) {
+      setConfirmLargePrint(true);
+      return;
+    }
+    handlePrintLabels(id);
   };
 
   return (
@@ -193,7 +208,7 @@ export default function BarcodesPage() {
                               </button>
                             )}
                           </div>
-                          <Button className="w-full" onClick={() => handlePrintLabels(selected.id)} loading={printing}>
+                          <Button className="w-full" onClick={() => handlePrintClick(selected.id)} loading={printing}>
                             <Printer className="h-4 w-4" />
                             Print {printQty} Label{printQty > 1 ? "s" : ""}
                           </Button>
@@ -208,6 +223,19 @@ export default function BarcodesPage() {
           </Card>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmLargePrint}
+        onClose={() => setConfirmLargePrint(false)}
+        onConfirm={() => {
+          setConfirmLargePrint(false);
+          if (selected) handlePrintLabels(selected.id);
+        }}
+        title="Print a large batch?"
+        description={`You're about to print ${printQty} labels. This will send ${printQty} pages to your printer — double-check this is the quantity you intended.`}
+        confirmLabel={`Print ${printQty} Labels`}
+        variant="warning"
+      />
     </div>
   );
 }
