@@ -111,6 +111,8 @@ export const ENDPOINTS = {
   PROFIT_SUMMARY_YEARLY: "/api/profit/summary/yearly",
   // GET ?period=daily|monthly|yearly&date=...&year=...&month=... → PDF bytes
   PROFIT_SUMMARY_DOWNLOAD: "/api/profit/summary/download",
+  // GET ?months=6 → ProfitSummaryResponse[] (oldest first, for dashboard trend charts)
+  PROFIT_SUMMARY_LAST_MONTHS: "/api/profit/summary/last-months",
 
   // ── Dashboard ─────────────────────────────────────────────
   // GET → DashboardResponse (role-adaptive)
