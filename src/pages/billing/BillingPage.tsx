@@ -651,10 +651,8 @@ export default function BillingPage() {
                   {discountAmount > 0 && <div className="flex justify-end text-xs text-success">-{formatCurrency(discountAmount)} discount applied</div>}
                   <div className="flex justify-between text-base font-bold border-t border-border/30 pt-2">
                     <span className="text-text-primary">Total</span>
-                    <span className={`${customTotal !== "" ? "text-warning" : "text-primary"}`}>
-                      {formatCurrency(finalTotal)}
-                      {customTotal !== "" && <span className="text-xs font-normal ml-1 text-text-muted">(custom)</span>}
-                    </span>
+
+                    <span className="text-primary">{formatCurrency(grandTotal)}</span>
                   </div>
 
                   {/* Manual total override */}

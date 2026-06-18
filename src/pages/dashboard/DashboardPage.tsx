@@ -56,36 +56,38 @@ export default function DashboardPage() {
 
       {/* Charts */}
       <div className="grid lg:grid-cols-2 gap-4 mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Sales Overview (6 months)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {chartsLoading ? (
-              <Skeleton className="h-48 w-full rounded-lg" />
-            ) : trendData.length === 0 ? (
-              <div className="h-48 flex items-center justify-center">
-                <p className="text-sm text-text-muted">No sales data yet for the last 6 months.</p>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={trendData}>
-                  <defs>
-                    <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563EB" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="month" stroke="#64748B" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="#64748B" tick={{ fontSize: 12 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip contentStyle={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 8 }} formatter={(v: number) => [formatCurrency(v), "Net Sales"]} />
-                  <Area type="monotone" dataKey="sales" stroke="#2563EB" fill="url(#salesGrad)" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+        {isAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Sales Overview (6 months)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {chartsLoading ? (
+                <Skeleton className="h-48 w-full rounded-lg" />
+              ) : trendData.length === 0 ? (
+                <div className="h-48 flex items-center justify-center">
+                  <p className="text-sm text-text-muted">No sales data yet for the last 6 months.</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <AreaChart data={trendData}>
+                    <defs>
+                      <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563EB" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis dataKey="month" stroke="#64748B" tick={{ fontSize: 12 }} />
+                    <YAxis stroke="#64748B" tick={{ fontSize: 12 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip contentStyle={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 8 }} formatter={(v: number) => [formatCurrency(v), "Net Sales"]} />
+                    <Area type="monotone" dataKey="sales" stroke="#2563EB" fill="url(#salesGrad)" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {isAdmin && (
           <Card>
