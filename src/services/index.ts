@@ -28,6 +28,9 @@ import type {
   AuditLogResponse,
   ItemReturnRequest,
   ItemReturnResponse,
+  CustomerCreditRequest,
+  CustomerCreditResponse,
+  CreditPaymentRequest,
 } from "@/types";
 
 // ── Auth ─────────────────────────────────────────────────────
@@ -154,6 +157,18 @@ export const returnService = {
   create: (data: ItemReturnRequest) => axiosInstance.post<ApiResponse<ItemReturnResponse>>(ENDPOINTS.RETURNS, data),
   getAll: () => axiosInstance.get<ApiResponse<ItemReturnResponse[]>>(ENDPOINTS.RETURNS_ALL),
   getByInvoice: (invoiceId: number) => axiosInstance.get<ApiResponse<ItemReturnResponse[]>>(ENDPOINTS.RETURNS_BY_INVOICE(invoiceId)),
+};
+
+// ── Customer Credits ──────────────────────────────────────────
+export const creditService = {
+  create: (data: CustomerCreditRequest) => axiosInstance.post<ApiResponse<CustomerCreditResponse>>(ENDPOINTS.CREDITS, data),
+  getAll: () => axiosInstance.get<ApiResponse<CustomerCreditResponse[]>>(ENDPOINTS.CREDITS),
+  getPending: () => axiosInstance.get<ApiResponse<CustomerCreditResponse[]>>(ENDPOINTS.CREDITS_PENDING),
+  getSummary: () => axiosInstance.get<ApiResponse<{ pendingCount: number; totalOutstanding: number }>>(ENDPOINTS.CREDITS_SUMMARY),
+  getByCustomer: (customerId: number) => axiosInstance.get<ApiResponse<CustomerCreditResponse[]>>(ENDPOINTS.CREDITS_BY_CUSTOMER(customerId)),
+  getByInvoice: (invoiceId: number) => axiosInstance.get<ApiResponse<CustomerCreditResponse>>(ENDPOINTS.CREDITS_BY_INVOICE(invoiceId)),
+  recordPayment: (creditId: number, data: CreditPaymentRequest) => axiosInstance.post<ApiResponse<CustomerCreditResponse>>(ENDPOINTS.CREDIT_PAYMENT(creditId), data),
+  checkCustomer: (customerId: number) => axiosInstance.get<ApiResponse<{ hasOutstandingCredit: boolean; outstandingAmount: number }>>(ENDPOINTS.CREDIT_CUSTOMER_CHECK(customerId)),
 };
 
 // ── Utility: Download blob as file ────────────────────────────

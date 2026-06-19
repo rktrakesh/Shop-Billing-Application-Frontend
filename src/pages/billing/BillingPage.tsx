@@ -1,15 +1,15 @@
 import { useState, useRef, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { QrCode, Search, Plus, Minus, Trash2, ShoppingCart, UserPlus, Download, X, Check, User, Printer, Receipt } from "lucide-react";
-import { barcodeService, customerService, invoiceService, variantService, settingsService, downloadBlob, printBlob, printReceipt } from "@/services";
+import { QrCode, Search, Plus, Minus, Trash2, ShoppingCart, UserPlus, Download, X, Check, User, Printer, Receipt, AlertTriangle } from "lucide-react";
+import { barcodeService, customerService, invoiceService, variantService, settingsService, creditService, downloadBlob, printBlob, printReceipt } from "@/services";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardContent, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/index";
+import { Card, CardHeader, CardTitle, CardContent, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter, SelectField, SelectItem } from "@/components/ui/index";
 import { formatCurrency } from "@/utils";
-import type { CartItem, CustomerResponse, InvoiceRequest, InvoiceResponse, ProductVariantResponse } from "@/types";
+import type { CartItem, CustomerResponse, InvoiceRequest, InvoiceResponse, ProductVariantResponse, PaymentMode } from "@/types";
 import toast from "react-hot-toast";
 
 // Simple id generator for cart items
@@ -52,6 +52,8 @@ interface BillingDraft {
   invoiceDiscountPercent: number;
   customTotal: number | "";
   notes: string;
+  paymentMode: PaymentMode;
+  amountPaid: number | "";
 }
 
 function loadBillingDraft(): Partial<BillingDraft> {
@@ -78,6 +80,9 @@ export default function BillingPage() {
   const [invoiceDiscountPercent, setInvoiceDiscountPercent] = useState(draft.invoiceDiscountPercent ?? 0);
   const [customTotal, setCustomTotal] = useState<number | "">(draft.customTotal ?? "");
   const [notes, setNotes] = useState(draft.notes ?? "");
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>(draft.paymentMode ?? "CASH");
+  const [amountPaid, setAmountPaid] = useState<number | "">(draft.amountPaid ?? "");
+  const [creditWarning, setCreditWarning] = useState<{ show: boolean; outstandingAmount: number } | null>(null);
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const [showVariantDialog, setShowVariantDialog] = useState(false);
   const [searchedVariants, setSearchedVariants] = useState<ProductVariantResponse[]>([]);
@@ -96,13 +101,15 @@ export default function BillingPage() {
       invoiceDiscountPercent,
       customTotal,
       notes,
+      paymentMode,
+      amountPaid,
     };
     try {
       sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify(toSave));
     } catch {
       // sessionStorage unavailable (e.g. private mode) — ignore, cart just won't persist
     }
-  }, [cart, selectedCustomer, walkInName, walkInMobile, discountAmount, invoiceDiscountType, invoiceDiscountPercent, customTotal, notes]);
+  }, [cart, selectedCustomer, walkInName, walkInMobile, discountAmount, invoiceDiscountType, invoiceDiscountPercent, customTotal, notes, paymentMode, amountPaid]);
 
   // Clear the saved draft once an invoice has been generated
   const clearDraft = () => {
@@ -293,13 +300,18 @@ export default function BillingPage() {
       setInvoiceDiscountPercent(0);
       setCustomTotal("");
       setNotes("");
+      setPaymentMode("CASH");
+      setAmountPaid("");
+      setCreditWarning(null);
       clearDraft();
+      qc.invalidateQueries({ queryKey: ["credits"] });
+      qc.invalidateQueries({ queryKey: ["credit-summary"] });
     },
   });
 
-  const mobileRegex = /^[6-9]\d{9}$/;
+  const qc = useQueryClient();
 
-  const handleGenerateInvoice = () => {
+  const handleGenerateInvoice = async () => {
     if (cart.length === 0) {
       toast.error("Cart is empty");
       return;
@@ -314,12 +326,33 @@ export default function BillingPage() {
       return;
     }
 
+    const mobileRegex = /^[6-9]\d{9}$/;
+
     if (walkInMobile && !mobileRegex.test(walkInMobile)) {
       toast("Please enter a valid 10-digit mobile number");
       return;
     }
 
-    const req: InvoiceRequest = {
+    // Check if registered customer has outstanding credit — show warning popup
+    if (selectedCustomer?.id && !creditWarning) {
+      try {
+        const checkRes = await creditService.checkCustomer(selectedCustomer.id);
+        const check = checkRes.data?.data;
+        if (check?.hasOutstandingCredit) {
+          setCreditWarning({ show: true, outstandingAmount: check.outstandingAmount });
+          return; // wait for user to confirm/dismiss
+        }
+      } catch {
+        // non-fatal — proceed without check if it fails
+      }
+    }
+
+    setCreditWarning(null);
+    buildAndSubmitInvoice(customerName);
+  };
+
+  const buildAndSubmitInvoice = (customerName: string) => {
+    const req = {
       customerId: selectedCustomer?.id,
       customerName,
       customerMobile: selectedCustomer?.mobileNumber || walkInMobile.trim() || undefined,
@@ -335,7 +368,9 @@ export default function BillingPage() {
       })),
       discountAmount: effectiveDiscountAmount,
       notes,
-    };
+      paymentMode,
+      amountPaid: amountPaid !== "" ? amountPaid : undefined,
+    } as InvoiceRequest;
     createInvoiceMutation.mutate(req);
   };
 
@@ -664,7 +699,6 @@ export default function BillingPage() {
                   {discountAmount > 0 && <div className="flex justify-end text-xs text-success">-{formatCurrency(discountAmount)} discount applied</div>}
                   <div className="flex justify-between text-base font-bold border-t border-border/30 pt-2">
                     <span className="text-text-primary">Total</span>
-
                     <span className="text-primary">{formatCurrency(grandTotal)}</span>
                   </div>
 
@@ -694,6 +728,34 @@ export default function BillingPage() {
                 </div>
 
                 <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full text-sm bg-card border border-border/40 rounded-lg px-3 py-2 text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-primary/60" />
+
+                {/* Payment mode */}
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-text-muted">Payment Mode *</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(["CASH", "UPI", "CARD", "OTHER"] as PaymentMode[]).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setPaymentMode(mode)}
+                        className={`py-2 rounded-lg text-xs font-medium border transition-colors ${paymentMode === mode ? "bg-primary text-white border-primary" : "bg-card text-text-secondary border-border/40 hover:border-primary/50"}`}
+                      >
+                        {mode === "CASH" ? "💵 Cash" : mode === "UPI" ? "📱 UPI" : mode === "CARD" ? "💳 Card" : "🔄 Other"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Partial payment / credit */}
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-text-muted">Amount Received (leave blank if full payment)</p>
+                  <Input type="number" min={0} step="0.01" placeholder={`Full amount: ${formatCurrency(finalTotal)}`} value={amountPaid} onChange={(e) => setAmountPaid(e.target.value === "" ? "" : Math.max(0, parseFloat(e.target.value)))} />
+                  {amountPaid !== "" && Number(amountPaid) < finalTotal && (
+                    <p className="text-xs text-warning flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />₹{(finalTotal - Number(amountPaid)).toFixed(2)} will be recorded as outstanding credit
+                    </p>
+                  )}
+                </div>
 
                 <Button className="w-full" size="lg" onClick={handleGenerateInvoice} loading={createInvoiceMutation.isPending}>
                   Generate Invoice
@@ -764,6 +826,41 @@ export default function BillingPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Credit Warning Popup */}
+      <Dialog open={!!creditWarning?.show} onOpenChange={() => setCreditWarning(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-warning">
+              <AlertTriangle className="h-5 w-5" />
+              Outstanding Credit
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <div className="text-center py-2">
+              <p className="text-sm text-text-secondary mb-2">
+                <span className="font-semibold text-text-primary">{selectedCustomer?.name}</span> has an outstanding balance of
+              </p>
+              <p className="text-2xl font-bold text-warning mb-3">{formatCurrency(creditWarning?.outstandingAmount ?? 0)}</p>
+              <p className="text-xs text-text-muted">You can still proceed with this new purchase. The existing credit remains separate and can be cleared from the Credits page.</p>
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreditWarning(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const name = selectedCustomer?.name || walkInName.trim();
+                setCreditWarning(null);
+                buildAndSubmitInvoice(name);
+              }}
+            >
+              Proceed Anyway
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

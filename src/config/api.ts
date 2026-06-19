@@ -139,11 +139,17 @@ export const ENDPOINTS = {
   // GET ?limit=50 → AuditLogResponse[]
   AUDIT_LOGS_RECENT: "/api/audit-logs/recent",
 
-  // ── Returns (ADMIN/MANAGER only) ──────────────────────────
-  // POST { invoiceId, invoiceItemId, quantity, refundAmount, reason } → ItemReturnResponse
+  // ── Returns (all roles) ───────────────────────────────────
   RETURNS: "/api/returns",
-  // GET → ItemReturnResponse[]
   RETURNS_ALL: "/api/returns",
-  // GET → ItemReturnResponse[]
   RETURNS_BY_INVOICE: (invoiceId: number | string) => `/api/returns/invoice/${invoiceId}`,
+
+  // ── Customer Credits / Outstanding ────────────────────────
+  CREDITS: "/api/credits",
+  CREDITS_PENDING: "/api/credits/pending",
+  CREDITS_SUMMARY: "/api/credits/summary",
+  CREDITS_BY_CUSTOMER: (customerId: number | string) => `/api/credits/customer/${customerId}`,
+  CREDITS_BY_INVOICE: (invoiceId: number | string) => `/api/credits/invoice/${invoiceId}`,
+  CREDIT_PAYMENT: (creditId: number | string) => `/api/credits/${creditId}/payment`,
+  CREDIT_CUSTOMER_CHECK: (customerId: number | string) => `/api/credits/customer/${customerId}/check`,
 };

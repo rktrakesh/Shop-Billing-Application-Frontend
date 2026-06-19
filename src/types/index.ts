@@ -182,10 +182,13 @@ export interface InvoiceResponse {
   discountAmount: number;
   taxAmount: number;
   grandTotal: number;
+  paymentMode: PaymentMode;
   createdByUsername: string;
   notes?: string;
   items: InvoiceItemResponse[];
   createdAt: string;
+  hasCredit?: boolean;
+  outstandingAmount?: number;
 }
 
 // ── Inventory ─────────────────────────────────────────────────
@@ -386,6 +389,48 @@ export interface CartItem {
   discountType: "flat" | "percent";
   lineTotal: number;
   productVariantId?: number;
+}
+
+export type PaymentMode = "CASH" | "UPI" | "CARD" | "OTHER";
+export type CreditStatus = "PENDING" | "PARTIAL" | "CLEARED";
+
+export interface CreditPaymentResponse {
+  id: number;
+  amount: number;
+  paymentMode: PaymentMode;
+  notes?: string;
+  recordedByUsername: string;
+  createdAt: string;
+}
+
+export interface CustomerCreditResponse {
+  id: number;
+  invoiceId: number;
+  invoiceNumber: string;
+  customerId?: number;
+  customerName: string;
+  customerMobile?: string;
+  totalAmount: number;
+  amountPaid: number;
+  outstandingAmount: number;
+  status: CreditStatus;
+  notes?: string;
+  createdByUsername: string;
+  createdAt: string;
+  updatedAt: string;
+  payments: CreditPaymentResponse[];
+}
+
+export interface CustomerCreditRequest {
+  invoiceId: number;
+  amountPaid: number;
+  notes?: string;
+}
+
+export interface CreditPaymentRequest {
+  amount: number;
+  paymentMode: PaymentMode;
+  notes?: string;
 }
 
 export interface AuthUser {
