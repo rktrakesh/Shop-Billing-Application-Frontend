@@ -27,7 +27,13 @@ function calcDiscount(type: "flat" | "percent", percent: number, flat: number, q
 
 const customerSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  mobileNumber: z.string().optional(),
+  mobileNumber: z
+    .string()
+    .optional()
+    .refine((val) => {
+      if (!val || val.trim() === "") return true; // allow empty
+      return /^[6-9]\d{9}$/.test(val); // validate if filled
+    }, "Enter a valid 10-digit mobile number"),
   address: z.string().optional(),
 });
 type CustomerForm = z.infer<typeof customerSchema>;
@@ -291,6 +297,8 @@ export default function BillingPage() {
     },
   });
 
+  const mobileRegex = /^[6-9]\d{9}$/;
+
   const handleGenerateInvoice = () => {
     if (cart.length === 0) {
       toast.error("Cart is empty");
@@ -303,6 +311,11 @@ export default function BillingPage() {
         icon: "🧾",
         duration: 4000,
       });
+      return;
+    }
+
+    if (walkInMobile && !mobileRegex.test(walkInMobile)) {
+      toast("Please enter a valid 10-digit mobile number");
       return;
     }
 
@@ -732,14 +745,14 @@ export default function BillingPage() {
 
       {/* New Customer Dialog */}
       <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Add New Customer</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit((data) => createCustomerMutation.mutate(data))}>
             <DialogBody className="space-y-3">
               <Input label="Name *" error={errors.name?.message} {...register("name")} />
-              <Input label="Mobile Number" {...register("mobileNumber")} />
+              <Input label="Mobile Number" error={errors.mobileNumber?.message} {...register("mobileNumber")} />
               <Input label="Address" {...register("address")} />
             </DialogBody>
             <DialogFooter>
