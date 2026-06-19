@@ -28,6 +28,9 @@ import type {
   AuditLogResponse,
   ItemReturnRequest,
   ItemReturnResponse,
+  CustomerCreditRequest,
+  CustomerCreditResponse,
+  CreditPaymentRequest,
 } from "@/types";
 
 // ── Auth ─────────────────────────────────────────────────────
@@ -154,6 +157,18 @@ export const returnService = {
   create: (data: ItemReturnRequest) => axiosInstance.post<ApiResponse<ItemReturnResponse>>(ENDPOINTS.RETURNS, data),
   getAll: () => axiosInstance.get<ApiResponse<ItemReturnResponse[]>>(ENDPOINTS.RETURNS_ALL),
   getByInvoice: (invoiceId: number) => axiosInstance.get<ApiResponse<ItemReturnResponse[]>>(ENDPOINTS.RETURNS_BY_INVOICE(invoiceId)),
+};
+
+// ── Customer Credits ──────────────────────────────────────────
+export const creditService = {
+  create: (data: CustomerCreditRequest) => axiosInstance.post<ApiResponse<CustomerCreditResponse>>(ENDPOINTS.CREDITS, data),
+  getAll: () => axiosInstance.get<ApiResponse<CustomerCreditResponse[]>>(ENDPOINTS.CREDITS),
+  getPending: () => axiosInstance.get<ApiResponse<CustomerCreditResponse[]>>(ENDPOINTS.CREDITS_PENDING),
+  getSummary: () => axiosInstance.get<ApiResponse<{ pendingCount: number; totalOutstanding: number }>>(ENDPOINTS.CREDITS_SUMMARY),
+  getByCustomer: (customerId: number) => axiosInstance.get<ApiResponse<CustomerCreditResponse[]>>(ENDPOINTS.CREDITS_BY_CUSTOMER(customerId)),
+  getByInvoice: (invoiceId: number) => axiosInstance.get<ApiResponse<CustomerCreditResponse>>(ENDPOINTS.CREDITS_BY_INVOICE(invoiceId)),
+  recordPayment: (creditId: number, data: CreditPaymentRequest) => axiosInstance.post<ApiResponse<CustomerCreditResponse>>(ENDPOINTS.CREDIT_PAYMENT(creditId), data),
+  checkCustomer: (customerId: number) => axiosInstance.get<ApiResponse<{ hasOutstandingCredit: boolean; outstandingAmount: number }>>(ENDPOINTS.CREDIT_CUSTOMER_CHECK(customerId)),
 };
 
 // ── Utility: Download blob as file ────────────────────────────
@@ -339,6 +354,44 @@ export function printReceipt(invoice: InvoiceResponse, shop?: ShopSettingsRespon
     })
     .join("");
 
+  // Payment mode label
+  const modeLabel: Record<string, string> = {
+    CASH: "💵 Cash",
+    UPI: "📱 UPI",
+    CARD: "💳 Card",
+    OTHER: "🔄 Other",
+  };
+  const paymentModeLabel = modeLabel[invoice.paymentMode] || invoice.paymentMode || "Cash";
+
+  // Credit / payment details block
+  const hasCredit = invoice.hasCredit && (invoice.outstandingAmount ?? 0) > 0;
+  const amountPaid = invoice.grandTotal - (invoice.outstandingAmount ?? 0);
+
+  const paymentDetailsHtml = hasCredit
+    ? `
+    <div class="divider"></div>
+    <div class="payment-section">
+      <div class="payment-title">PAYMENT DETAILS</div>
+      <div class="row"><span>Mode</span><span>${paymentModeLabel}</span></div>
+      <div class="row"><span>Invoice Total</span><span>${formatMoney(invoice.grandTotal)}</span></div>
+      <div class="row paid-row"><span>Amount Paid</span><span>${formatMoney(amountPaid)}</span></div>
+      <div class="row outstanding-row">
+        <span>OUTSTANDING</span>
+        <span>${formatMoney(invoice.outstandingAmount ?? 0)}</span>
+      </div>
+      <div class="credit-note">Please clear your balance at the earliest.</div>
+      ${shop?.mobileNumber ? `<div class="credit-note">Contact: ${escapeHtml(shop.mobileNumber)}</div>` : ""}
+    </div>
+  `
+    : `
+    <div class="divider"></div>
+    <div class="payment-section">
+      <div class="payment-title">PAYMENT DETAILS</div>
+      <div class="row"><span>Mode</span><span>${paymentModeLabel}</span></div>
+      <div class="row paid-full"><span>✓ PAID IN FULL</span><span>${formatMoney(invoice.grandTotal)}</span></div>
+    </div>
+  `;
+
   const html = `
     <!DOCTYPE html>
     <html>
@@ -369,6 +422,12 @@ export function printReceipt(invoice: InvoiceResponse, shop?: ShopSettingsRespon
           .totals .row { font-size: 11px; padding: 1px 0; }
           .grand-total { font-weight: bold; font-size: 13px; border-top: 1px dashed #000; padding-top: 3px; margin-top: 3px; }
           .footer { text-align: center; font-size: 9px; margin-top: 6px; }
+          .payment-section { margin: 3px 0; }
+          .payment-title { font-weight: bold; font-size: 10px; margin-bottom: 3px; }
+          .paid-row { color: #006600; }
+          .outstanding-row { font-weight: bold; font-size: 12px; color: #aa2200; margin-top: 3px; }
+          .paid-full { font-weight: bold; color: #006600; }
+          .credit-note { font-size: 9px; color: #555; margin-top: 3px; font-style: italic; }
         </style>
       </head>
       <body>
@@ -411,6 +470,8 @@ export function printReceipt(invoice: InvoiceResponse, shop?: ShopSettingsRespon
             <span>${formatMoney(invoice.grandTotal)}</span>
           </div>
         </div>
+
+        ${paymentDetailsHtml}
 
         ${invoice.notes ? `<div class="divider"></div><div class="muted">Note: ${escapeHtml(invoice.notes)}</div>` : ""}
 

@@ -14,6 +14,7 @@ import InventoryPage from "@/pages/inventory/InventoryPage";
 import CustomersPage from "@/pages/customers/CustomersPage";
 import ReportsPage from "@/pages/reports/ReportsPage";
 import ReturnsPage from "@/pages/returns/ReturnsPage";
+import CreditsPage from "@/pages/credits/CreditsPage";
 import ProfitPage from "@/pages/profit/ProfitPage";
 import UsersPage from "@/pages/users/UsersPage";
 import SettingsPage from "@/pages/settings/SettingsPage";
@@ -54,6 +55,7 @@ function AppRoutes() {
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/customers" element={<CustomersPage />} />
           <Route path="/returns" element={<ReturnsPage />} />
+          <Route path="/credits" element={<CreditsPage />} />
 
           {/* Admin only */}
           <Route element={<ProtectedRoute allowedRoles={["ROLE_ADMIN"]} />}>

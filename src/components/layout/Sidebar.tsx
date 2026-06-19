@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, ShoppingCart, Package, Layers, Warehouse, Users, BarChart2, TrendingUp, UserCog, Settings, FileText, QrCode, Undo2, ChevronLeft, ChevronRight, Shirt } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Package, Layers, Warehouse, Users, BarChart2, TrendingUp, UserCog, Settings, FileText, QrCode, Undo2, CreditCard, ChevronLeft, ChevronRight, Shirt } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn, getRoleLabel, getRoleBadgeClass } from "@/utils";
 
@@ -21,6 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Customers", icon: Users, to: "/customers" },
   { label: "Invoices", icon: FileText, to: "/invoices" },
   { label: "Returns", icon: Undo2, to: "/returns" },
+  { label: "Credits", icon: CreditCard, to: "/credits" },
   { label: "Reports", icon: BarChart2, to: "/reports", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
   { label: "Profit", icon: TrendingUp, to: "/profit", roles: ["ROLE_ADMIN"] },
   { label: "Users", icon: UserCog, to: "/users", roles: ["ROLE_ADMIN"] },

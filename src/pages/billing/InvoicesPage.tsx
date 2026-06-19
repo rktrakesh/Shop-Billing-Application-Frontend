@@ -200,7 +200,33 @@ export default function InvoicesPage() {
               { key: "customerName", header: "Customer", render: (r) => (r as unknown as InvoiceResponse).customerName || "Walk-in" },
               { key: "invoiceDate", header: "Date", sortable: true, render: (r) => formatDateTime((r as unknown as InvoiceResponse).invoiceDate) },
               { key: "items", header: "Items", render: (r) => <Badge variant="muted">{(r as unknown as InvoiceResponse).items?.length ?? 0}</Badge> },
-              { key: "grandTotal", header: "Total", sortable: true, render: (r) => <span className="font-semibold text-text-primary">{formatCurrency((r as unknown as InvoiceResponse).grandTotal)}</span> },
+              {
+                key: "paymentMode",
+                header: "Payment",
+                render: (r) => {
+                  const mode = (r as unknown as InvoiceResponse).paymentMode;
+                  const icons: Record<string, string> = { CASH: "💵", UPI: "📱", CARD: "💳", OTHER: "🔄" };
+                  return (
+                    <span className="text-xs text-text-muted">
+                      {icons[mode] ?? ""} {mode}
+                    </span>
+                  );
+                },
+              },
+              {
+                key: "grandTotal",
+                header: "Total",
+                sortable: true,
+                render: (r) => {
+                  const inv = r as unknown as InvoiceResponse;
+                  return (
+                    <div>
+                      <span className="font-semibold text-text-primary">{formatCurrency(inv.grandTotal)}</span>
+                      {inv.hasCredit && <p className="text-xs text-warning">⚠️ {formatCurrency(inv.outstandingAmount ?? 0)} outstanding</p>}
+                    </div>
+                  );
+                },
+              },
               { key: "createdByUsername", header: "Created By", render: (r) => <span className="text-xs text-text-muted">{(r as unknown as InvoiceResponse).createdByUsername}</span> },
             ]}
             actions={(row) => {
@@ -301,6 +327,16 @@ export default function InvoicesPage() {
                     <span className="text-text-primary">Total</span>
                     <span className="text-primary">{formatCurrency(viewing.grandTotal)}</span>
                   </div>
+                  <div className="flex justify-between text-xs pt-1">
+                    <span className="text-text-muted">Payment</span>
+                    <span className="text-text-secondary">{viewing.paymentMode}</span>
+                  </div>
+                  {viewing.hasCredit && (
+                    <div className="flex justify-between text-xs pt-0.5">
+                      <span className="text-warning">Outstanding</span>
+                      <span className="font-semibold text-warning">{formatCurrency(viewing.outstandingAmount ?? 0)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
