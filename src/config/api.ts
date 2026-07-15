@@ -152,4 +152,12 @@ export const ENDPOINTS = {
   CREDITS_BY_INVOICE: (invoiceId: number | string) => `/api/credits/invoice/${invoiceId}`,
   CREDIT_PAYMENT: (creditId: number | string) => `/api/credits/${creditId}/payment`,
   CREDIT_CUSTOMER_CHECK: (customerId: number | string) => `/api/credits/customer/${customerId}/check`,
+
+  // ── Shop Day Management ───────────────────────────────────
+  SHOP_STATUS: "/api/shop/status",
+  SHOP_OPEN: "/api/shop/open",
+  SHOP_CLOSE: "/api/shop/close",
+  SHOP_LOGS: "/api/shop/logs",
+  SHOP_REPORT: (dayLogId: number | string) => `/api/shop/report/${dayLogId}`,
+  SHOP_REPORT_DOWNLOAD: (dayLogId: number | string) => `/api/shop/report/${dayLogId}/download`,
 };

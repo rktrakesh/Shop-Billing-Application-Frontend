@@ -31,6 +31,8 @@ import type {
   CustomerCreditRequest,
   CustomerCreditResponse,
   CreditPaymentRequest,
+  ShopStatusResponse,
+  DayReportResponse,
 } from "@/types";
 
 // ── Auth ─────────────────────────────────────────────────────
@@ -169,6 +171,16 @@ export const creditService = {
   getByInvoice: (invoiceId: number) => axiosInstance.get<ApiResponse<CustomerCreditResponse>>(ENDPOINTS.CREDITS_BY_INVOICE(invoiceId)),
   recordPayment: (creditId: number, data: CreditPaymentRequest) => axiosInstance.post<ApiResponse<CustomerCreditResponse>>(ENDPOINTS.CREDIT_PAYMENT(creditId), data),
   checkCustomer: (customerId: number) => axiosInstance.get<ApiResponse<{ hasOutstandingCredit: boolean; outstandingAmount: number }>>(ENDPOINTS.CREDIT_CUSTOMER_CHECK(customerId)),
+};
+
+// ── Shop Day Management ───────────────────────────────────────
+export const shopDayService = {
+  getStatus: () => axiosInstance.get<ApiResponse<ShopStatusResponse>>(ENDPOINTS.SHOP_STATUS),
+  openShop: () => axiosInstance.post<ApiResponse<ShopStatusResponse>>(ENDPOINTS.SHOP_OPEN),
+  closeShop: () => axiosInstance.post<ApiResponse<ShopStatusResponse>>(ENDPOINTS.SHOP_CLOSE),
+  getLogs: () => axiosInstance.get<ApiResponse<ShopStatusResponse[]>>(ENDPOINTS.SHOP_LOGS),
+  getReport: (dayLogId: number) => axiosInstance.get<ApiResponse<DayReportResponse>>(ENDPOINTS.SHOP_REPORT(dayLogId)),
+  downloadReport: (dayLogId: number) => axiosInstance.get(ENDPOINTS.SHOP_REPORT_DOWNLOAD(dayLogId), { responseType: "blob" }),
 };
 
 // ── Utility: Download blob as file ────────────────────────────
