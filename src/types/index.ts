@@ -394,6 +394,56 @@ export interface CartItem {
 export type PaymentMode = "CASH" | "UPI" | "CARD" | "OTHER";
 export type CreditStatus = "PENDING" | "PARTIAL" | "CLEARED";
 
+export interface ShopStatusResponse {
+  dayLogId?: number;
+  status: "OPEN" | "CLOSED";
+  openTime?: string;
+  closeTime?: string;
+  closedBy?: string;
+  isOpen: boolean;
+}
+
+export interface ReturnDetailItem {
+  invoiceNumber: string;
+  customerName?: string;
+  customerMobile?: string;
+  itemName: string;
+  color?: string;
+  size?: string;
+  quantity: number;
+  refundAmount: number;
+  returnedAt: string;
+}
+
+export interface CreditDetailItem {
+  invoiceNumber: string;
+  customerName: string;
+  customerMobile?: string;
+  invoiceTotal: number;
+  amountPaid: number;
+  outstandingAmount: number;
+  status: string;
+  createdAt: string;
+}
+
+export interface DayReportResponse {
+  openTime: string;
+  closeTime?: string;
+  closedBy: string;
+  invoiceCount: number;
+  totalSales: number;
+  totalDiscount: number;
+  salesByPaymentMode: Record<string, number>;
+  totalReturns: number;
+  returnCount: number;
+  returnDetails: ReturnDetailItem[];
+  totalCreditGiven: number;
+  totalCreditCollected: number;
+  creditCount: number;
+  creditDetails: CreditDetailItem[];
+  netCollection: number;
+}
+
 export interface CreditPaymentResponse {
   id: number;
   amount: number;
