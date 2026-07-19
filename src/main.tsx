@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast";
 import App from "./App";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import "./index.css";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,24 +23,26 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <App />
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              style: {
-                background: "#1E293B",
-                color: "#F8FAFC",
-                border: "1px solid #334155",
-                borderRadius: "8px",
-              },
-              success: {
-                iconTheme: { primary: "#22C55E", secondary: "#1E293B" },
-              },
-              error: {
-                iconTheme: { primary: "#EF4444", secondary: "#1E293B" },
-              },
-            }}
-          />
+          <AuthProvider>
+            <App />
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                style: {
+                  background: "#1E293B",
+                  color: "#F8FAFC",
+                  border: "1px solid #334155",
+                  borderRadius: "8px",
+                },
+                success: {
+                  iconTheme: { primary: "#22C55E", secondary: "#1E293B" },
+                },
+                error: {
+                  iconTheme: { primary: "#EF4444", secondary: "#1E293B" },
+                },
+              }}
+            />
+          </AuthProvider>
         </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>
