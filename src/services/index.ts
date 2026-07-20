@@ -33,12 +33,14 @@ import type {
   CreditPaymentRequest,
   ShopStatusResponse,
   DayReportResponse,
+  AllowedIpResponse,
 } from "@/types";
 
 // ── Auth ─────────────────────────────────────────────────────
 export const authService = {
   login: (data: LoginRequest) => axiosInstance.post<ApiResponse<AuthResponse>>(ENDPOINTS.LOGIN, data),
   refresh: (refreshToken: string) => axiosInstance.post<ApiResponse<AuthResponse>>(ENDPOINTS.REFRESH, { refreshToken }),
+  verifyIpOtp: (data: { username: string; emailOtp: string }) => axiosInstance.post<ApiResponse<{ sessionToken: string; ipAddress: string }>>(ENDPOINTS.VERIFY_IP_OTP, data),
 };
 
 // ── Products ─────────────────────────────────────────────────
@@ -181,6 +183,15 @@ export const shopDayService = {
   getLogs: () => axiosInstance.get<ApiResponse<ShopStatusResponse[]>>(ENDPOINTS.SHOP_LOGS),
   getReport: (dayLogId: number) => axiosInstance.get<ApiResponse<DayReportResponse>>(ENDPOINTS.SHOP_REPORT(dayLogId)),
   downloadReport: (dayLogId: number) => axiosInstance.get(ENDPOINTS.SHOP_REPORT_DOWNLOAD(dayLogId), { responseType: "blob" }),
+};
+
+// ── IP Security ──────────────────────────────────────────────
+export const ipSecurityService = {
+  verifyOtp: (data: { username: string; emailOtp: string }) => axiosInstance.post<ApiResponse<{ sessionToken: string; ipAddress: string }>>(ENDPOINTS.VERIFY_IP_OTP, data),
+  getMyIp: () => axiosInstance.get<ApiResponse<{ ipAddress: string }>>(ENDPOINTS.MY_IP),
+  getAllowedIps: () => axiosInstance.get<ApiResponse<AllowedIpResponse[]>>(ENDPOINTS.IP_WHITELIST),
+  addAllowedIp: (ipAddress: string, label?: string) => axiosInstance.post<ApiResponse<AllowedIpResponse>>(ENDPOINTS.IP_WHITELIST_ADD, { ipAddress, label }),
+  removeAllowedIp: (id: number) => axiosInstance.delete<ApiResponse<void>>(ENDPOINTS.IP_WHITELIST_DELETE(id)),
 };
 
 // ── Utility: Download blob as file ────────────────────────────

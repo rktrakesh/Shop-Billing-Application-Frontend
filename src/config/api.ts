@@ -160,4 +160,17 @@ export const ENDPOINTS = {
   SHOP_LOGS: "/api/shop/logs",
   SHOP_REPORT: (dayLogId: number | string) => `/api/shop/report/${dayLogId}`,
   SHOP_REPORT_DOWNLOAD: (dayLogId: number | string) => `/api/shop/report/${dayLogId}/download`,
+
+  // ── IP Security ───────────────────────────────────────────
+  // ── IP Security ──────────────────────────────────────────
+  // POST { username, emailOtp } → { sessionToken, ipAddress }
+  VERIFY_IP_OTP: "/api/auth/verify-ip-otp",
+  // GET  → AllowedIpResponse[]
+  IP_WHITELIST: "/api/admin/ip-whitelist",
+  // POST { ipAddress, label } → AllowedIpResponse
+  IP_WHITELIST_ADD: "/api/admin/ip-whitelist",
+  // DELETE → void
+  IP_WHITELIST_DELETE: (id: number | string) => `/api/admin/ip-whitelist/${id}`,
+  // GET  → { ipAddress: string }
+  MY_IP: "/api/admin/ip-whitelist/my-ip",
 };

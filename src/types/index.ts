@@ -39,6 +39,7 @@ export type ReportType = "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY" | "CUSTOM";
 export interface LoginRequest {
   username: string;
   password: string;
+  sessionToken?: string; // provided after OTP verification for unknown IPs
 }
 
 export interface AuthResponse {
@@ -481,6 +482,14 @@ export interface CreditPaymentRequest {
   amount: number;
   paymentMode: PaymentMode;
   notes?: string;
+}
+
+export interface AllowedIpResponse {
+  id: number;
+  ipAddress: string;
+  label?: string;
+  addedByUsername: string;
+  createdAt: string;
 }
 
 export interface AuthUser {
