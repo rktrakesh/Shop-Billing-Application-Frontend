@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { FileText, Download, Eye, Printer, Receipt, Undo2, AlertTriangle } from "lucide-react";
+import { FileText, Download, Eye, Printer, Receipt, Undo2, AlertTriangle, MessageCircle } from "lucide-react";
 import { invoiceService, settingsService, returnService, downloadBlob, printBlob, printReceipt } from "@/services";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/index";
 import { DataTable } from "@/components/common/DataTable";
 import { PageHeader } from "@/components/common";
+import { WhatsAppShareDialog } from "@/components/common/WhatsAppShareDialog";
 import { formatCurrency, formatDateTime, actualUnitPriceFromLine } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import type { InvoiceItemResponse, InvoiceResponse, ItemReturnRequest } from "@/types";
@@ -27,6 +28,7 @@ export default function InvoicesPage() {
   const [returningInvoice, setReturningInvoice] = useState<InvoiceResponse | null>(null);
   const [returnLines, setReturnLines] = useState<Record<number, ReturnLineState>>({});
   const [historyInvoice, setHistoryInvoice] = useState<InvoiceResponse | null>(null);
+  const [sharingInvoice, setSharingInvoice] = useState<InvoiceResponse | null>(null);
 
   const canViewAll = isAdmin || isManager;
   const canReturn = true; // all roles can process returns
@@ -250,6 +252,9 @@ export default function InvoicesPage() {
                   <Button size="icon-sm" variant="ghost" onClick={() => handleDownload(inv.id, inv.invoiceNumber)} title="Download">
                     <Download className="h-3.5 w-3.5" />
                   </Button>
+                  <Button size="icon-sm" variant="ghost" onClick={() => setSharingInvoice(inv)} title="Share via WhatsApp">
+                    <MessageCircle className="h-3.5 w-3.5 text-success" />
+                  </Button>
                 </>
               );
             }}
@@ -368,6 +373,10 @@ export default function InvoicesPage() {
                   <Download className="h-4 w-4" />
                   Download PDF
                 </Button>
+                <Button className="flex-1" variant="success" onClick={() => setSharingInvoice(viewing)}>
+                  <MessageCircle className="h-4 w-4" />
+                  WhatsApp
+                </Button>
               </div>
             </DialogBody>
           )}
@@ -453,6 +462,8 @@ export default function InvoicesPage() {
 
       {/* Customer History Dialog */}
       <CustomerHistoryDialog open={!!historyInvoice} onClose={() => setHistoryInvoice(null)} customerId={historyInvoice?.customerId} walkInName={historyInvoice?.customerName} walkInMobile={historyInvoice?.customerMobile} />
+
+      <WhatsAppShareDialog invoice={sharingInvoice} shop={shopSettings} onClose={() => setSharingInvoice(null)} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, ShoppingCart, Package, Layers, Warehouse, Users, BarChart2, TrendingUp, UserCog, Settings, FileText, QrCode, Undo2, CreditCard, ChevronLeft, ChevronRight, Shirt, Moon, Truck, Boxes, Receipt, Factory, Wallet } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, ShoppingBag, Package, Layers, Warehouse, Users, BarChart2, TrendingUp, UserCog, Settings, FileText, QrCode, Undo2, CreditCard, ChevronLeft, ChevronRight, ChevronDown, Shirt, Moon, Truck, Boxes, Receipt, Factory, Wallet } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn, getRoleLabel, getRoleBadgeClass } from "@/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,36 +9,81 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/index";
 import toast from "react-hot-toast";
 
+type Role = "ROLE_ADMIN" | "ROLE_MANAGER" | "ROLE_USER";
+
 interface NavItem {
   label: string;
   icon: React.ElementType;
   to: string;
-  roles?: ("ROLE_ADMIN" | "ROLE_MANAGER" | "ROLE_USER")[];
+  roles?: Role[];
 }
 
-const NAV_ITEMS: NavItem[] = [
+interface NavGroup {
+  label: string;
+  icon: React.ElementType;
+  items: NavItem[];
+}
+
+// Two quick-access items stay outside any group; everything else is bucketed
+// into collapsible sections so the sidebar doesn't turn into a long flat list.
+const TOP_LEVEL_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/dashboard", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
   { label: "Billing", icon: ShoppingCart, to: "/billing" },
-  { label: "Products", icon: Package, to: "/products", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
-  { label: "Variants", icon: Layers, to: "/variants", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
-  { label: "Inventory", icon: Warehouse, to: "/inventory", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
-  { label: "Suppliers", icon: Truck, to: "/suppliers", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
-  { label: "Raw Materials", icon: Boxes, to: "/raw-materials", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
-  { label: "Purchases", icon: Receipt, to: "/purchases", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
-  { label: "Production", icon: Factory, to: "/production", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
-  { label: "Barcodes", icon: QrCode, to: "/barcodes", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
-  { label: "Customers", icon: Users, to: "/customers" },
-  { label: "Invoices", icon: FileText, to: "/invoices" },
-  { label: "Returns", icon: Undo2, to: "/returns" },
-  { label: "Credits", icon: CreditCard, to: "/credits" },
-  { label: "Reports", icon: BarChart2, to: "/reports", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
-  { label: "Expenses", icon: Wallet, to: "/expenses", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
-  { label: "Profit", icon: TrendingUp, to: "/profit", roles: ["ROLE_ADMIN"] },
-  { label: "Day Report", icon: Moon, to: "/dayreport", roles: ["ROLE_ADMIN"] },
-  { label: "Users", icon: UserCog, to: "/users", roles: ["ROLE_ADMIN"] },
-  { label: "Settings", icon: Settings, to: "/settings", roles: ["ROLE_ADMIN"] },
-  { label: "Audit Logs", icon: FileText, to: "/audit", roles: ["ROLE_ADMIN"] },
 ];
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Catalog",
+    icon: Package,
+    items: [
+      { label: "Products", icon: Package, to: "/products", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
+      { label: "Variants", icon: Layers, to: "/variants", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
+      { label: "Barcodes", icon: QrCode, to: "/barcodes", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
+    ],
+  },
+  {
+    label: "Inventory & Supply Chain",
+    icon: Warehouse,
+    items: [
+      { label: "Inventory", icon: Warehouse, to: "/inventory", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
+      { label: "Suppliers", icon: Truck, to: "/suppliers", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
+      { label: "Raw Materials", icon: Boxes, to: "/raw-materials", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
+      { label: "Purchases", icon: Receipt, to: "/purchases", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
+      { label: "Production", icon: Factory, to: "/production", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
+    ],
+  },
+  {
+    label: "Sales",
+    icon: ShoppingBag,
+    items: [
+      { label: "Customers", icon: Users, to: "/customers" },
+      { label: "Invoices", icon: FileText, to: "/invoices" },
+      { label: "Returns", icon: Undo2, to: "/returns" },
+      { label: "Credits", icon: CreditCard, to: "/credits" },
+    ],
+  },
+  {
+    label: "Reports & Finance",
+    icon: BarChart2,
+    items: [
+      { label: "Reports", icon: BarChart2, to: "/reports", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
+      { label: "Expenses", icon: Wallet, to: "/expenses", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
+      { label: "Profit", icon: TrendingUp, to: "/profit", roles: ["ROLE_ADMIN"] },
+      { label: "Day Report", icon: Moon, to: "/dayreport", roles: ["ROLE_ADMIN"] },
+    ],
+  },
+  {
+    label: "Administration",
+    icon: UserCog,
+    items: [
+      { label: "Users", icon: UserCog, to: "/users", roles: ["ROLE_ADMIN"] },
+      { label: "Settings", icon: Settings, to: "/settings", roles: ["ROLE_ADMIN"] },
+      { label: "Audit Logs", icon: FileText, to: "/audit", roles: ["ROLE_ADMIN"] },
+    ],
+  },
+];
+
+const OPEN_GROUPS_STORAGE_KEY = "sidebar-open-groups";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -82,10 +127,46 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
   });
   const location = useLocation();
 
-  const visibleItems = NAV_ITEMS.filter((item) => {
-    if (!item.roles) return true;
-    return item.roles.includes(user?.role as "ROLE_ADMIN" | "ROLE_MANAGER" | "ROLE_USER");
+  const userRole = user?.role as Role | undefined;
+  const canSee = (roles?: Role[]) => !roles || (userRole && roles.includes(userRole));
+
+  const visibleTopLevel = TOP_LEVEL_ITEMS.filter((item) => canSee(item.roles));
+  const visibleGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => canSee(item.roles)),
+  })).filter((group) => group.items.length > 0);
+
+  // Which group (if any) contains the page currently being viewed
+  const activeGroupLabel = visibleGroups.find((group) => group.items.some((item) => location.pathname.startsWith(item.to)))?.label;
+
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(OPEN_GROUPS_STORAGE_KEY);
+      const parsed: string[] = stored ? JSON.parse(stored) : [];
+      return new Set(parsed);
+    } catch {
+      return new Set();
+    }
   });
+
+  // Make sure whichever group holds the current page is expanded, even if
+  // the saved preference had it closed (so you're never "hiding" your own page).
+  useEffect(() => {
+    if (activeGroupLabel && !openGroups.has(activeGroupLabel)) {
+      setOpenGroups((prev) => new Set(prev).add(activeGroupLabel));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeGroupLabel]);
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      localStorage.setItem(OPEN_GROUPS_STORAGE_KEY, JSON.stringify(Array.from(next)));
+      return next;
+    });
+  };
 
   const roleLabel = getRoleLabel(user?.role ?? "");
   const roleBadge = getRoleBadgeClass(user?.role ?? "");
@@ -107,12 +188,52 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-        {visibleItems.map((item) => (
+        {/* Quick-access items, always visible */}
+        {visibleTopLevel.map((item) => (
           <NavLink key={item.to} to={item.to} onClick={onMobileClose} className={({ isActive }) => cn("nav-item", isActive && "nav-item-active", collapsed && "justify-center px-2")} title={collapsed ? item.label : undefined}>
             <item.icon className="h-4 w-4 flex-shrink-0" />
             {!collapsed && <span>{item.label}</span>}
           </NavLink>
         ))}
+
+        {/* When the rail is collapsed to icons-only, skip group headers —
+            just show every item flat since there's no room for labels anyway. */}
+        {collapsed ? (
+          <>
+            <div className="my-2 border-t border-border/30" />
+            {visibleGroups
+              .flatMap((group) => group.items)
+              .map((item) => (
+                <NavLink key={item.to} to={item.to} onClick={onMobileClose} className={({ isActive }) => cn("nav-item justify-center px-2", isActive && "nav-item-active")} title={item.label}>
+                  <item.icon className="h-4 w-4 flex-shrink-0" />
+                </NavLink>
+              ))}
+          </>
+        ) : (
+          visibleGroups.map((group) => {
+            const isOpen = openGroups.has(group.label);
+            const hasActiveItem = group.label === activeGroupLabel;
+            return (
+              <div key={group.label} className="pt-2">
+                <button onClick={() => toggleGroup(group.label)} className={cn("w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wide transition-colors", hasActiveItem ? "text-primary" : "text-text-muted hover:text-text-primary")}>
+                  <group.icon className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="flex-1 text-left">{group.label}</span>
+                  <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-180")} />
+                </button>
+                {isOpen && (
+                  <div className="mt-0.5 space-y-0.5">
+                    {group.items.map((item) => (
+                      <NavLink key={item.to} to={item.to} onClick={onMobileClose} className={({ isActive }) => cn("nav-item pl-8", isActive && "nav-item-active")}>
+                        <item.icon className="h-4 w-4 flex-shrink-0" />
+                        <span>{item.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
       </nav>
 
       {/* Close Day button — Admin only, visible when shop is open */}

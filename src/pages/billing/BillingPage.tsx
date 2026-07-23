@@ -3,12 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { QrCode, Search, Plus, Minus, Trash2, ShoppingCart, UserPlus, Download, X, Check, User, Printer, Receipt, AlertTriangle } from "lucide-react";
+import { QrCode, Search, Plus, Minus, Trash2, ShoppingCart, UserPlus, Download, X, Check, User, Printer, Receipt, AlertTriangle, MessageCircle } from "lucide-react";
 import { barcodeService, customerService, invoiceService, variantService, settingsService, creditService, downloadBlob, printBlob, printReceipt } from "@/services";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter, SelectField, SelectItem } from "@/components/ui/index";
 import { formatCurrency } from "@/utils";
+import { WhatsAppShareDialog } from "@/components/common/WhatsAppShareDialog";
 import type { CartItem, CustomerResponse, InvoiceRequest, InvoiceResponse, ProductVariantResponse, PaymentMode } from "@/types";
 import toast from "react-hot-toast";
 
@@ -87,6 +88,7 @@ export default function BillingPage() {
   const [showVariantDialog, setShowVariantDialog] = useState(false);
   const [searchedVariants, setSearchedVariants] = useState<ProductVariantResponse[]>([]);
   const [lastInvoice, setLastInvoice] = useState<InvoiceResponse | null>(null);
+  const [sharingInvoice, setSharingInvoice] = useState<InvoiceResponse | null>(null);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   // Persist the in-progress sale on every change so a refresh doesn't lose it.
@@ -306,6 +308,9 @@ export default function BillingPage() {
       clearDraft();
       qc.invalidateQueries({ queryKey: ["credits"] });
       qc.invalidateQueries({ queryKey: ["credit-summary"] });
+      // Ready for the next customer — send focus back to the barcode field
+      // so a USB scanner (HID keyboard emulation) can be used immediately.
+      barcodeRef.current?.focus();
     },
   });
 
@@ -555,6 +560,10 @@ export default function BillingPage() {
                 <Download className="h-3.5 w-3.5" />
                 PDF
               </Button>
+              <Button size="sm" variant="success" onClick={() => setSharingInvoice(lastInvoice)}>
+                <MessageCircle className="h-3.5 w-3.5" />
+                WhatsApp
+              </Button>
               <Button size="sm" variant="ghost" onClick={() => setLastInvoice(null)}>
                 <X className="h-3.5 w-3.5" />
               </Button>
@@ -562,6 +571,8 @@ export default function BillingPage() {
           </div>
         )}
       </div>
+
+      <WhatsAppShareDialog invoice={sharingInvoice} shop={shopSettings} onClose={() => setSharingInvoice(null)} />
 
       {/* RIGHT: Cart */}
       <div className="w-full lg:w-[400px] flex flex-col">
