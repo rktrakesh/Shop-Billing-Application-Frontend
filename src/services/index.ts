@@ -43,6 +43,8 @@ import type {
   SupplierPurchaseResponse,
   ProductionBatchRequest,
   ProductionBatchResponse,
+  ExpenseRequest,
+  ExpenseResponse,
 } from "@/types";
 
 // ── Auth ─────────────────────────────────────────────────────
@@ -238,6 +240,17 @@ export const productionService = {
   getById: (id: number) => axiosInstance.get<ApiResponse<ProductionBatchResponse>>(ENDPOINTS.PRODUCTION_BY_ID(id)),
   getByRawMaterial: (rawMaterialId: number) => axiosInstance.get<ApiResponse<ProductionBatchResponse[]>>(ENDPOINTS.PRODUCTION_BY_RAW_MATERIAL(rawMaterialId)),
   create: (data: ProductionBatchRequest) => axiosInstance.post<ApiResponse<ProductionBatchResponse>>(ENDPOINTS.PRODUCTION, data),
+};
+
+// ── Expenses ────────────────────────────────────────────────────
+export const expenseService = {
+  getAll: (start?: string, end?: string) => axiosInstance.get<ApiResponse<ExpenseResponse[]>>(ENDPOINTS.EXPENSES, { params: start && end ? { start, end } : undefined }),
+  getById: (id: number) => axiosInstance.get<ApiResponse<ExpenseResponse>>(ENDPOINTS.EXPENSE_BY_ID(id)),
+  create: (data: ExpenseRequest) => axiosInstance.post<ApiResponse<ExpenseResponse>>(ENDPOINTS.EXPENSES, data),
+  update: (id: number, data: ExpenseRequest) => axiosInstance.put<ApiResponse<ExpenseResponse>>(ENDPOINTS.EXPENSE_BY_ID(id), data),
+  delete: (id: number) => axiosInstance.delete<ApiResponse<void>>(ENDPOINTS.EXPENSE_BY_ID(id)),
+  getCategories: () => axiosInstance.get<ApiResponse<string[]>>(ENDPOINTS.EXPENSE_CATEGORIES),
+  getTotal: (start: string, end: string) => axiosInstance.get<ApiResponse<{ total: number }>>(ENDPOINTS.EXPENSE_TOTAL, { params: { start, end } }),
 };
 
 // ── Utility: Download blob as file ────────────────────────────

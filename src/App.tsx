@@ -28,6 +28,7 @@ import SuppliersPage from "@/pages/suppliers/SuppliersPage";
 import RawMaterialsPage from "@/pages/rawmaterials/RawMaterialsPage";
 import PurchaseEntryPage from "@/pages/purchases/PurchaseEntryPage";
 import ProductionPage from "@/pages/production/ProductionPage";
+import ExpensesPage from "@/pages/expenses/ExpensesPage";
 
 export default function App() {
   const { isAuthenticated } = useAuth();
@@ -60,6 +61,7 @@ export default function App() {
             <Route path="/raw-materials" element={<RawMaterialsPage />} />
             <Route path="/purchases" element={<PurchaseEntryPage />} />
             <Route path="/production" element={<ProductionPage />} />
+            <Route path="/expenses" element={<ExpensesPage />} />
           </Route>
 
           {/* Admin only */}

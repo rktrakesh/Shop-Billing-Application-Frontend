@@ -280,7 +280,6 @@ export interface MonthlyProfitRequest {
   year: number;
   totalSales: number;
   productionCost: number;
-  otherExpenses: number;
   notes?: string;
 }
 
@@ -291,7 +290,7 @@ export interface MonthlyProfitResponse {
   monthName: string;
   totalSales: number;
   productionCost: number;
-  otherExpenses: number;
+  otherExpenses: number; // auto-computed from real Expense entries for that month
   netProfit: number;
   notes?: string;
   createdAt: string;
@@ -306,6 +305,7 @@ export interface ProfitSummaryResponse {
   endDate: string;
   totalSales: number;
   productionCost: number;
+  totalExpenses: number;
   netProfit: number;
   marginPercent: number;
   invoiceCount: number;
@@ -625,6 +625,34 @@ export interface ProductionBatchResponse {
   createdByUsername: string;
   createdAt: string;
   producedVariant: ProductVariantResponse;
+}
+
+// ── Expenses ─────────────────────────────────────────────────
+
+export interface ExpenseRequest {
+  expenseDate: string; // yyyy-MM-dd
+  category: string; // "Rent" | "Electricity" | "Staff Salary" | "Transport" | "Packaging" | "Maintenance" | "Other"
+  customCategory?: string;
+  amount: number;
+  notes?: string;
+  receiptImagePath?: string;
+  recurring: boolean;
+}
+
+export interface ExpenseResponse {
+  id: number;
+  expenseDate: string;
+  category: string;
+  amount: number;
+  notes?: string;
+  receiptImagePath?: string;
+  recurring: boolean;
+  recurringSourceId?: number;
+  nextRecurrenceDate?: string;
+  createdByUsername: string;
+  deletable: boolean; // true only on the same day it was created
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AuthUser {
