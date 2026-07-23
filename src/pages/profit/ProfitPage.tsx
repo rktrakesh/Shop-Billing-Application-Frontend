@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { TrendingUp, Plus, DollarSign, Wallet, PiggyBank, Download, Percent } from "lucide-react";
+import { TrendingUp, Plus, DollarSign, Wallet, PiggyBank, Download, Percent, Receipt } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { profitService, downloadBlob } from "@/services";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ const schema = z.object({
   year: z.coerce.number().min(2000).max(2100),
   totalSales: z.coerce.number().min(0),
   productionCost: z.coerce.number().min(0),
-  otherExpenses: z.coerce.number().min(0),
   notes: z.string().optional(),
 });
 type FormData = z.infer<typeof schema>;
@@ -193,9 +192,10 @@ export default function ProfitPage() {
               <p className="text-xs text-text-muted mb-3">
                 Period: <span className="text-text-secondary font-medium">{summary.periodLabel}</span> ({formatDate(summary.startDate)} – {formatDate(summary.endDate)}) · {summary.invoiceCount} invoice{summary.invoiceCount === 1 ? "" : "s"}
               </p>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 <StatCard title="Total Sales" value={summary.totalSales} icon={DollarSign} iconBg="bg-primary/10" iconColor="text-primary" isCurrency />
                 <StatCard title="Production Cost" value={summary.productionCost} icon={Wallet} iconBg="bg-warning/10" iconColor="text-warning" isCurrency />
+                <StatCard title="Expenses" value={summary.totalExpenses} icon={Receipt} iconBg="bg-danger/10" iconColor="text-danger" isCurrency />
                 <StatCard title="Net Profit" value={summary.netProfit} icon={PiggyBank} iconBg="bg-success/10" iconColor="text-success" isCurrency />
                 <StatCard title="Profit Margin" value={`${summary.marginPercent.toFixed(1)}%`} icon={Percent} iconBg="bg-primary/10" iconColor="text-primary" />
               </div>
@@ -207,7 +207,7 @@ export default function ProfitPage() {
       {/* ── Manual Monthly Profit Ledger (existing) ─────────────────── */}
       <PageHeader
         title="Manual Profit Ledger"
-        subtitle="Optional: record additional expenses not captured by invoices"
+        subtitle="Record total sales and production cost for the month — expenses are pulled in automatically from your Expense entries"
         actions={
           <div className="flex items-center gap-2">
             <SelectField value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
@@ -304,7 +304,7 @@ export default function ProfitPage() {
               </div>
               <Input label="Total Sales (₹) *" type="number" step="0.01" error={errors.totalSales?.message} {...register("totalSales")} />
               <Input label="Production Cost (₹) *" type="number" step="0.01" error={errors.productionCost?.message} {...register("productionCost")} />
-              <Input label="Other Expenses (₹) *" type="number" step="0.01" error={errors.otherExpenses?.message} {...register("otherExpenses")} />
+              <p className="text-xs text-text-muted">Other expenses are now pulled in automatically from your recorded Expense entries for this month — no need to enter them here.</p>
               <Input label="Notes" {...register("notes")} />
             </DialogBody>
             <DialogFooter>

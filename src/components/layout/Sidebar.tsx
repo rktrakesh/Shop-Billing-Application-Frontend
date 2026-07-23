@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, ShoppingCart, Package, Layers, Warehouse, Users, BarChart2, TrendingUp, UserCog, Settings, FileText, QrCode, Undo2, CreditCard, ChevronLeft, ChevronRight, Shirt, Moon } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Package, Layers, Warehouse, Users, BarChart2, TrendingUp, UserCog, Settings, FileText, QrCode, Undo2, CreditCard, ChevronLeft, ChevronRight, Shirt, Moon, Truck, Boxes, Receipt, Factory, Wallet } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn, getRoleLabel, getRoleBadgeClass } from "@/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -22,12 +22,17 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Products", icon: Package, to: "/products", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
   { label: "Variants", icon: Layers, to: "/variants", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
   { label: "Inventory", icon: Warehouse, to: "/inventory", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
+  { label: "Suppliers", icon: Truck, to: "/suppliers", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
+  { label: "Raw Materials", icon: Boxes, to: "/raw-materials", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
+  { label: "Purchases", icon: Receipt, to: "/purchases", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
+  { label: "Production", icon: Factory, to: "/production", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
   { label: "Barcodes", icon: QrCode, to: "/barcodes", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
   { label: "Customers", icon: Users, to: "/customers" },
   { label: "Invoices", icon: FileText, to: "/invoices" },
   { label: "Returns", icon: Undo2, to: "/returns" },
   { label: "Credits", icon: CreditCard, to: "/credits" },
   { label: "Reports", icon: BarChart2, to: "/reports", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
+  { label: "Expenses", icon: Wallet, to: "/expenses", roles: ["ROLE_ADMIN", "ROLE_MANAGER"] },
   { label: "Profit", icon: TrendingUp, to: "/profit", roles: ["ROLE_ADMIN"] },
   { label: "Day Report", icon: Moon, to: "/dayreport", roles: ["ROLE_ADMIN"] },
   { label: "Users", icon: UserCog, to: "/users", roles: ["ROLE_ADMIN"] },

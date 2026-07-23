@@ -213,4 +213,14 @@ export const ENDPOINTS = {
   PRODUCTION_BY_ID: (id: number | string) => `/api/production/${id}`,
   // GET → ProductionBatchResponse[]
   PRODUCTION_BY_RAW_MATERIAL: (rawMaterialId: number | string) => `/api/production/raw-material/${rawMaterialId}`,
+
+  // ── Expenses ──────────────────────────────────────────────
+  // GET (optional ?start=&end=) | POST { expenseDate, category, amount, ... } → ExpenseResponse
+  EXPENSES: "/api/expenses",
+  // GET/PUT/DELETE /api/expenses/:id
+  EXPENSE_BY_ID: (id: number | string) => `/api/expenses/${id}`,
+  // GET → string[]
+  EXPENSE_CATEGORIES: "/api/expenses/categories",
+  // GET ?start=&end= → { total: number }
+  EXPENSE_TOTAL: "/api/expenses/total",
 };
