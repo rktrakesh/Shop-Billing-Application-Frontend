@@ -24,6 +24,10 @@ import DayReportPage from "@/pages/dayreport/DayReportPage";
 import UsersPage from "@/pages/users/UsersPage";
 import AuditLogPage from "@/pages/audit/AuditLogPage";
 import SettingsPage from "@/pages/settings/SettingsPage";
+import SuppliersPage from "@/pages/suppliers/SuppliersPage";
+import RawMaterialsPage from "@/pages/rawmaterials/RawMaterialsPage";
+import PurchaseEntryPage from "@/pages/purchases/PurchaseEntryPage";
+import ProductionPage from "@/pages/production/ProductionPage";
 
 export default function App() {
   const { isAuthenticated } = useAuth();
@@ -52,6 +56,10 @@ export default function App() {
             <Route path="/barcodes" element={<BarcodesPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/suppliers" element={<SuppliersPage />} />
+            <Route path="/raw-materials" element={<RawMaterialsPage />} />
+            <Route path="/purchases" element={<PurchaseEntryPage />} />
+            <Route path="/production" element={<ProductionPage />} />
           </Route>
 
           {/* Admin only */}

@@ -34,6 +34,15 @@ import type {
   ShopStatusResponse,
   DayReportResponse,
   AllowedIpResponse,
+  SupplierRequest,
+  SupplierResponse,
+  RawMaterialResponse,
+  RawMaterialAdjustmentRequest,
+  RawMaterialMovementResponse,
+  SupplierPurchaseRequest,
+  SupplierPurchaseResponse,
+  ProductionBatchRequest,
+  ProductionBatchResponse,
 } from "@/types";
 
 // ── Auth ─────────────────────────────────────────────────────
@@ -192,6 +201,43 @@ export const ipSecurityService = {
   getAllowedIps: () => axiosInstance.get<ApiResponse<AllowedIpResponse[]>>(ENDPOINTS.IP_WHITELIST),
   addAllowedIp: (ipAddress: string, label?: string) => axiosInstance.post<ApiResponse<AllowedIpResponse>>(ENDPOINTS.IP_WHITELIST_ADD, { ipAddress, label }),
   removeAllowedIp: (id: number) => axiosInstance.delete<ApiResponse<void>>(ENDPOINTS.IP_WHITELIST_DELETE(id)),
+};
+
+// ── Suppliers ────────────────────────────────────────────────
+export const supplierService = {
+  getAll: () => axiosInstance.get<ApiResponse<SupplierResponse[]>>(ENDPOINTS.SUPPLIERS),
+  getAllIncludingInactive: () => axiosInstance.get<ApiResponse<SupplierResponse[]>>(ENDPOINTS.SUPPLIERS_ALL),
+  getById: (id: number) => axiosInstance.get<ApiResponse<SupplierResponse>>(ENDPOINTS.SUPPLIER_BY_ID(id)),
+  create: (data: SupplierRequest) => axiosInstance.post<ApiResponse<SupplierResponse>>(ENDPOINTS.SUPPLIERS, data),
+  update: (id: number, data: SupplierRequest) => axiosInstance.put<ApiResponse<SupplierResponse>>(ENDPOINTS.SUPPLIER_BY_ID(id), data),
+  delete: (id: number) => axiosInstance.delete<ApiResponse<void>>(ENDPOINTS.SUPPLIER_BY_ID(id)),
+};
+
+// ── Raw Materials ─────────────────────────────────────────────
+export const rawMaterialService = {
+  getAll: () => axiosInstance.get<ApiResponse<RawMaterialResponse[]>>(ENDPOINTS.RAW_MATERIALS),
+  getAllIncludingInactive: () => axiosInstance.get<ApiResponse<RawMaterialResponse[]>>(ENDPOINTS.RAW_MATERIALS_ALL),
+  getById: (id: number) => axiosInstance.get<ApiResponse<RawMaterialResponse>>(ENDPOINTS.RAW_MATERIAL_BY_ID(id)),
+  getLowStock: () => axiosInstance.get<ApiResponse<RawMaterialResponse[]>>(ENDPOINTS.RAW_MATERIALS_LOW_STOCK),
+  getItemNames: () => axiosInstance.get<ApiResponse<string[]>>(ENDPOINTS.RAW_MATERIALS_ITEM_NAMES),
+  adjustStock: (data: RawMaterialAdjustmentRequest) => axiosInstance.post<ApiResponse<RawMaterialResponse>>(ENDPOINTS.RAW_MATERIALS_ADJUST, data),
+  getMovements: (id: number) => axiosInstance.get<ApiResponse<RawMaterialMovementResponse[]>>(ENDPOINTS.RAW_MATERIAL_MOVEMENTS(id)),
+};
+
+// ── Supplier Purchases ────────────────────────────────────────
+export const supplierPurchaseService = {
+  getAll: () => axiosInstance.get<ApiResponse<SupplierPurchaseResponse[]>>(ENDPOINTS.SUPPLIER_PURCHASES),
+  getById: (id: number) => axiosInstance.get<ApiResponse<SupplierPurchaseResponse>>(ENDPOINTS.SUPPLIER_PURCHASE_BY_ID(id)),
+  getBySupplier: (supplierId: number) => axiosInstance.get<ApiResponse<SupplierPurchaseResponse[]>>(ENDPOINTS.SUPPLIER_PURCHASES_BY_SUPPLIER(supplierId)),
+  create: (data: SupplierPurchaseRequest) => axiosInstance.post<ApiResponse<SupplierPurchaseResponse>>(ENDPOINTS.SUPPLIER_PURCHASES, data),
+};
+
+// ── Production ────────────────────────────────────────────────
+export const productionService = {
+  getAll: () => axiosInstance.get<ApiResponse<ProductionBatchResponse[]>>(ENDPOINTS.PRODUCTION),
+  getById: (id: number) => axiosInstance.get<ApiResponse<ProductionBatchResponse>>(ENDPOINTS.PRODUCTION_BY_ID(id)),
+  getByRawMaterial: (rawMaterialId: number) => axiosInstance.get<ApiResponse<ProductionBatchResponse[]>>(ENDPOINTS.PRODUCTION_BY_RAW_MATERIAL(rawMaterialId)),
+  create: (data: ProductionBatchRequest) => axiosInstance.post<ApiResponse<ProductionBatchResponse>>(ENDPOINTS.PRODUCTION, data),
 };
 
 // ── Utility: Download blob as file ────────────────────────────
