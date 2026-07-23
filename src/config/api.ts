@@ -173,4 +173,44 @@ export const ENDPOINTS = {
   IP_WHITELIST_DELETE: (id: number | string) => `/api/admin/ip-whitelist/${id}`,
   // GET  → { ipAddress: string }
   MY_IP: "/api/admin/ip-whitelist/my-ip",
+
+  // ── Suppliers ─────────────────────────────────────────────
+  // GET → SupplierResponse[] (active) | POST { name, mobileNumber, address, notes } → SupplierResponse
+  SUPPLIERS: "/api/suppliers",
+  // GET → SupplierResponse[] (includes inactive)
+  SUPPLIERS_ALL: "/api/suppliers/all",
+  // GET/PUT/DELETE /api/suppliers/:id
+  SUPPLIER_BY_ID: (id: number | string) => `/api/suppliers/${id}`,
+
+  // ── Raw Materials ─────────────────────────────────────────
+  // GET → RawMaterialResponse[] (active)
+  RAW_MATERIALS: "/api/raw-materials",
+  // GET → RawMaterialResponse[] (includes inactive)
+  RAW_MATERIALS_ALL: "/api/raw-materials/all",
+  // GET /api/raw-materials/:id
+  RAW_MATERIAL_BY_ID: (id: number | string) => `/api/raw-materials/${id}`,
+  // GET → RawMaterialResponse[]
+  RAW_MATERIALS_LOW_STOCK: "/api/raw-materials/low-stock",
+  // GET → string[] (distinct item names, for autocomplete)
+  RAW_MATERIALS_ITEM_NAMES: "/api/raw-materials/item-names",
+  // POST { rawMaterialId, newStock, reason } → RawMaterialResponse
+  RAW_MATERIALS_ADJUST: "/api/raw-materials/adjust",
+  // GET → RawMaterialMovementResponse[]
+  RAW_MATERIAL_MOVEMENTS: (id: number | string) => `/api/raw-materials/${id}/movements`,
+
+  // ── Supplier Purchases ────────────────────────────────────
+  // GET → SupplierPurchaseResponse[] | POST { supplierId, billNumber, purchaseDate, items[] } → SupplierPurchaseResponse
+  SUPPLIER_PURCHASES: "/api/supplier-purchases",
+  // GET /api/supplier-purchases/:id
+  SUPPLIER_PURCHASE_BY_ID: (id: number | string) => `/api/supplier-purchases/${id}`,
+  // GET → SupplierPurchaseResponse[]
+  SUPPLIER_PURCHASES_BY_SUPPLIER: (supplierId: number | string) => `/api/supplier-purchases/supplier/${supplierId}`,
+
+  // ── Production ────────────────────────────────────────────
+  // GET → ProductionBatchResponse[] | POST { rawMaterialId, quantityUsed, designName, ... } → ProductionBatchResponse
+  PRODUCTION: "/api/production",
+  // GET /api/production/:id
+  PRODUCTION_BY_ID: (id: number | string) => `/api/production/${id}`,
+  // GET → ProductionBatchResponse[]
+  PRODUCTION_BY_RAW_MATERIAL: (rawMaterialId: number | string) => `/api/production/raw-material/${rawMaterialId}`,
 };

@@ -492,6 +492,141 @@ export interface AllowedIpResponse {
   createdAt: string;
 }
 
+// ── Suppliers ────────────────────────────────────────────────
+
+export interface SupplierRequest {
+  name: string;
+  mobileNumber?: string;
+  address?: string;
+  notes?: string;
+}
+
+export interface SupplierResponse {
+  id: number;
+  name: string;
+  mobileNumber?: string;
+  address?: string;
+  notes?: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Raw Materials ────────────────────────────────────────────
+
+export type RawMaterialChangeType = "PURCHASE" | "PRODUCTION_USE" | "MANUAL_ADJUSTMENT";
+
+export interface RawMaterialResponse {
+  id: number;
+  itemName: string;
+  color?: string;
+  size?: string;
+  stock: number;
+  averageCostPrice: number;
+  minimumStock: number;
+  active: boolean;
+  lowStock: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RawMaterialAdjustmentRequest {
+  rawMaterialId: number;
+  newStock: number;
+  reason?: string;
+}
+
+export interface RawMaterialMovementResponse {
+  id: number;
+  rawMaterialId: number;
+  itemName: string;
+  color?: string;
+  size?: string;
+  changeType: RawMaterialChangeType;
+  quantity: number;
+  stockBefore: number;
+  stockAfter: number;
+  reason?: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+// ── Supplier Purchases ───────────────────────────────────────
+
+export interface SupplierPurchaseItemRequest {
+  rawMaterialId?: number;
+  itemName?: string;
+  color?: string;
+  size?: string;
+  quantity: number;
+  purchasePrice: number;
+}
+
+export interface SupplierPurchaseRequest {
+  supplierId: number;
+  billNumber?: string;
+  purchaseDate: string; // yyyy-MM-dd
+  notes?: string;
+  items: SupplierPurchaseItemRequest[];
+}
+
+export interface SupplierPurchaseItemResponse {
+  id: number;
+  rawMaterialId: number;
+  itemName: string;
+  color?: string;
+  size?: string;
+  quantity: number;
+  purchasePrice: number;
+  lineTotal: number;
+}
+
+export interface SupplierPurchaseResponse {
+  id: number;
+  supplierId: number;
+  supplierName: string;
+  billNumber?: string;
+  purchaseDate: string;
+  totalCost: number;
+  notes?: string;
+  createdByUsername: string;
+  items: SupplierPurchaseItemResponse[];
+  createdAt: string;
+}
+
+// ── Production ───────────────────────────────────────────────
+
+export interface ProductionBatchRequest {
+  rawMaterialId: number;
+  quantityUsed: number;
+  designName: string;
+  description?: string;
+  category: string;
+  printingType: string; // "DTF" | "Sublimation" | "Stitching" | "Other"
+  customPrintingType?: string;
+  sellingPrice: number;
+  minimumStock?: number;
+  printingCostTotal: number;
+  productionDate?: string; // yyyy-MM-dd
+  notes?: string;
+}
+
+export interface ProductionBatchResponse {
+  id: number;
+  rawMaterialId: number;
+  rawMaterialName: string;
+  quantityUsed: number;
+  printingType: string;
+  printingCostTotal: number;
+  printingCostPerUnit: number;
+  rawMaterialCostPerUnit: number;
+  productionDate: string;
+  notes?: string;
+  createdByUsername: string;
+  createdAt: string;
+  producedVariant: ProductVariantResponse;
+}
+
 export interface AuthUser {
   token: string;
   refreshToken: string;
